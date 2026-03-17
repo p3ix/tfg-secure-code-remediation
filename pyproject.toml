@@ -1,0 +1,9 @@
+[project]
+name = "tfg-secure-code-remediation"
+version = "0.1.0"
+description = "Web app para análisis y remediación asistida por IA de vulnerabilidades en proyectos Python"
+requires-python = ">=3.12"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
