@@ -24,3 +24,6 @@ Fase inicial de preparación del entorno y arquitectura base.
 ```bash
 uvicorn app.main:app --reload
 ```
+
+## Licencia
+Este repositorio se distribuye bajo licencia MIT. Véase el archivo `LICENSE` y `docs/02_licenses_and_dependencies.md`.
