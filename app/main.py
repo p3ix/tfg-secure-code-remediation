@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from app.services.analysis_service import analyze_fixtures_reports
+from app.services.pipeline_orchestrator import run_mvp_autofix_verification_roundtrip
 from app.services.runtime_analysis_service import analyze_fixtures_runtime
 
 app = FastAPI(
@@ -24,4 +25,16 @@ def run_fixtures_analysis() -> dict:
     try:
         return analyze_fixtures_runtime()
     except (FileNotFoundError, RuntimeError) as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@app.get("/analysis/pipeline/mvp-autofix-verification")
+def mvp_autofix_verification() -> dict:
+    """
+    Ejecuta repair→verify sobre los fixtures canónicos del MVP (autofix).
+    Puede tardar (Bandit + Semgrep por verificación). sql_injection no incluido.
+    """
+    try:
+        return run_mvp_autofix_verification_roundtrip()
+    except OSError as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc

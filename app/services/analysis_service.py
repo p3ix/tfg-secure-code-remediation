@@ -6,6 +6,7 @@ from typing import Any
 
 from app.services.findings_loader import load_all_findings
 from app.services.findings_mapper import enrich_findings_with_classification
+from app.services.pipeline_orchestrator import build_pipeline_view
 
 
 BANDIT_REPORT = Path("reports/bandit/fixtures-mvp-bandit.json")
@@ -31,4 +32,5 @@ def analyze_fixtures_reports() -> dict[str, Any]:
         "semgrep_report": str(SEMGREP_REPORT),
         "total_findings": len(enriched_findings),
         "findings": [asdict(finding) for finding in enriched_findings],
+        "pipeline": build_pipeline_view(enriched_findings),
     }
