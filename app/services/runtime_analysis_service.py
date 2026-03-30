@@ -7,6 +7,7 @@ from typing import Any
 
 from app.services.findings_loader import load_all_findings
 from app.services.findings_mapper import enrich_findings_with_classification
+from app.services.pipeline_orchestrator import build_pipeline_view
 
 FIXTURES_TARGET = Path("fixtures/mvp")
 RUNTIME_REPORTS_DIR = Path("reports/runtime")
@@ -98,4 +99,5 @@ def analyze_fixtures_runtime() -> dict[str, Any]:
         },
         "total_findings": len(enriched_findings),
         "findings": [asdict(finding) for finding in enriched_findings],
+        "pipeline": build_pipeline_view(enriched_findings),
     }

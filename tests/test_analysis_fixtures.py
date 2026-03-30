@@ -27,6 +27,12 @@ def test_analysis_fixtures_endpoint_returns_findings() -> None:
     assert "mvp_category" in first_finding
     assert "remediation_mode" in first_finding
 
+    assert "pipeline" in payload
+    pipe = payload["pipeline"]
+    assert pipe["pipeline_step"] == "classified"
+    assert "counts_by_mvp_category" in pipe
+    assert "findings_by_mvp_category" in pipe
+
 
 def test_analysis_fixtures_endpoint_contains_classified_findings() -> None:
     response = client.get("/analysis/fixtures")
