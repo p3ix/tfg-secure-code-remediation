@@ -50,6 +50,16 @@ def test_missing_timeout_mapping_is_partial() -> None:
     assert enriched.owasp_asvs is None
 
 
+def test_sql_injection_mapping() -> None:
+    finding = build_base_finding("sql_injection")
+
+    enriched = enrich_finding_with_classification(finding)
+
+    assert enriched.cwe_id == 89
+    assert enriched.owasp_top10 == "A05:2025 - Injection"
+    assert enriched.owasp_asvs == "ASVS v5.0.0 V1.2 Injection Prevention"
+
+
 def test_enrich_findings_with_classification_on_real_data() -> None:
     findings = load_all_findings(
         bandit_report_path="reports/bandit/fixtures-mvp-bandit.json",
