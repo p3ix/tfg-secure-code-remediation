@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from app.services.analysis_service import analyze_fixtures_reports
 from app.services.pipeline_orchestrator import run_mvp_autofix_verification_roundtrip
+from app.services.presentable_scan import presentable_from_internal_analysis
 from app.services.runtime_analysis_service import analyze_fixtures_runtime
 
 app = FastAPI(
@@ -20,10 +21,29 @@ def analyze_fixtures() -> dict:
     except FileNotFoundError as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
+
+@app.get("/analysis/fixtures/presentable")
+def analyze_fixtures_presentable() -> dict:
+    """Vista JSON orientada a presentación (sin datos crudos de herramienta)."""
+    try:
+        return presentable_from_internal_analysis(analyze_fixtures_reports())
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
 @app.post("/analysis/run-fixtures")
 def run_fixtures_analysis() -> dict:
     try:
         return analyze_fixtures_runtime()
+    except (FileNotFoundError, RuntimeError) as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@app.post("/analysis/run-fixtures/presentable")
+def run_fixtures_analysis_presentable() -> dict:
+    """Mismo escaneo que /analysis/run-fixtures, respuesta presentable."""
+    try:
+        return presentable_from_internal_analysis(analyze_fixtures_runtime())
     except (FileNotFoundError, RuntimeError) as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
