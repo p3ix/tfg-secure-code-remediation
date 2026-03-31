@@ -1,14 +1,41 @@
-from fastapi import FastAPI, HTTPException
+from pathlib import Path
+
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import HTMLResponse, RedirectResponse
+from starlette.templating import Jinja2Templates
+
 from app.services.analysis_service import analyze_fixtures_reports
 from app.services.pipeline_orchestrator import run_mvp_autofix_verification_roundtrip
 from app.services.presentable_scan import presentable_from_internal_analysis
 from app.services.runtime_analysis_service import analyze_fixtures_runtime
+
+_TEMPLATE_DIR = Path(__file__).resolve().parent / "templates"
+templates = Jinja2Templates(directory=str(_TEMPLATE_DIR))
 
 app = FastAPI(
     title="TFG Secure Code Remediation",
     description="API base del TFG para análisis y remediación asistida de vulnerabilidades",
     version="0.1.0"
 )
+
+
+@app.get("/", response_class=RedirectResponse)
+def root() -> RedirectResponse:
+    return RedirectResponse(url="/dashboard", status_code=302)
+
+
+@app.get("/dashboard", response_class=HTMLResponse)
+def dashboard(request: Request) -> HTMLResponse:
+    """Vista HTML del escaneo sobre reports estáticos (misma lógica que /analysis/fixtures/presentable)."""
+    try:
+        scan = presentable_from_internal_analysis(analyze_fixtures_reports())
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    return templates.TemplateResponse(
+        request,
+        "dashboard.html",
+        {"request": request, "scan": scan},
+    )
 
 @app.get("/health")
 def health():

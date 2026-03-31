@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Resultado del escaneo — TFG</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --card: #1a2332;
+      --text: #e7ecf3;
+      --muted: #8b9cb3;
+      --accent: #3d8fd1;
+      --border: #2a3a4d;
+      --sev-high: #e85d6c;
+      --sev-med: #e6a23c;
+      --sev-low: #67c090;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      padding: 1.5rem clamp(1rem, 4vw, 2.5rem);
+    }
+    h1 { font-size: 1.35rem; font-weight: 600; margin: 0 0 0.25rem; }
+    .sub { color: var(--muted); font-size: 0.9rem; margin-bottom: 1.5rem; }
+    .grid {
+      display: grid;
+      gap: 1rem;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      margin-bottom: 1.5rem;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem 1.1rem;
+    }
+    .card h2 { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 0 0 0.5rem; }
+    .card .num { font-size: 1.5rem; font-weight: 700; color: var(--accent); }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    th, td { padding: 0.6rem 0.75rem; text-align: left; border-bottom: 1px solid var(--border); vertical-align: top; }
+    th { background: #141c28; color: var(--muted); font-weight: 600; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; }
+    tr:last-child td { border-bottom: none; }
+    tbody tr:hover td { background: rgba(61, 143, 209, 0.06); }
+    .sev-high { color: var(--sev-high); font-weight: 600; }
+    .sev-medium { color: var(--sev-med); font-weight: 600; }
+    .sev-low { color: var(--sev-low); font-weight: 600; }
+    .sev-unknown { color: var(--muted); }
+    a { color: var(--accent); }
+    .msg { font-size: 0.78rem; color: var(--muted); word-break: break-word; max-width: 36rem; }
+    footer { margin-top: 2rem; font-size: 0.8rem; color: var(--muted); }
+    code { font-size: 0.78rem; background: #141c28; padding: 0.1rem 0.35rem; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <h1>Resultado del escaneo (vista MVP)</h1>
+  <p class="sub">
+    Objetivo: <code>{{ scan.meta.analysis_target }}</code>
+    · Modo: <code>{{ scan.meta.execution_mode }}</code>
+    · Generado: {{ scan.meta.generated_at }}
+  </p>
+
+  <div class="grid">
+    <div class="card">
+      <h2>Total hallazgos</h2>
+      <div class="num">{{ scan.summary.total_findings }}</div>
+    </div>
+    {% for sev, n in scan.summary.by_severity.items() %}
+    <div class="card">
+      <h2>Severidad {{ sev }}</h2>
+      <div class="num">{{ n }}</div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="grid" style="margin-bottom:1.5rem;">
+    {% for cat, n in scan.summary.by_mvp_category.items() %}
+    <div class="card">
+      <h2>{{ cat }}</h2>
+      <div class="num">{{ n }}</div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <h2 style="font-size:1rem;margin-bottom:0.75rem;">Hallazgos</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Título / detalle</th>
+        <th>Severidad</th>
+        <th>Categoría</th>
+        <th>Fichero</th>
+        <th>Herramienta</th>
+        <th>Remediación</th>
+        <th>Estándares</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in scan.findings %}
+      <tr>
+        <td>{{ row.id }}</td>
+        <td>
+          <strong>{{ row.title }}</strong>
+          <p class="msg">{{ row.message }}</p>
+        </td>
+        <td class="sev-{{ row.severity }}">{{ row.severity_label }}</td>
+        <td><code>{{ row.category }}</code></td>
+        <td><small>{{ row.file }}:{{ row.line_start }}</small></td>
+        <td>{{ row.tool }}<br/><small>{{ row.rule_id }}</small></td>
+        <td><small>{{ row.remediation.mode_label }}</small></td>
+        <td>
+          {% if row.standards.cwe_id %}
+            CWE-{{ row.standards.cwe_id }}
+            {% if row.standards.cwe_url %}<br/><a href="{{ row.standards.cwe_url }}" target="_blank" rel="noopener">CWE</a>{% endif %}
+          {% else %}—{% endif %}
+          {% if row.standards.owasp_top10 %}<br/><small>{{ row.standards.owasp_top10 }}</small>{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <footer>
+    {{ scan.meta.note }}
+    · <code>schema_version {{ scan.schema_version }}</code>
+    {% if scan.meta.reports %}
+    · Informes: Bandit {{ scan.meta.reports.bandit }}, Semgrep {{ scan.meta.reports.semgrep }}
+    {% endif %}
+  </footer>
+</body>
+</html>
