@@ -11,6 +11,11 @@ CLASSIFICATION_MAP: dict[str, dict[str, str | int | None]] = {
         "owasp_top10": "A05:2025 - Injection",
         "owasp_asvs": "ASVS v5.0.0 V1.2 Injection Prevention",
     },
+    "subprocess_import_info": {
+        "cwe_id": 78,
+        "owasp_top10": "A05:2025 - Injection",
+        "owasp_asvs": "ASVS v5.0.0 V1.2 Injection Prevention",
+    },
     "unsafe_yaml_load": {
         "cwe_id": 502,
         "owasp_top10": "A08:2025 - Software or Data Integrity Failures",

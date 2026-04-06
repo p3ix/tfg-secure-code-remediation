@@ -34,6 +34,10 @@ def infer_mvp_category_from_bandit_result(result: dict[str, Any]) -> str:
     if test_id in {"B602", "B605"} or "shell" in message:
         return "command_injection"
 
+    # B404: import subprocess — informativo; categoría propia para no mezclar con B602/B605 en verificación
+    if test_id == "B404" and "command_injection" in file_path.replace("\\", "/"):
+        return "subprocess_import_info"
+
     if test_id == "B506" or "yaml" in message:
         return "unsafe_yaml_load"
 
@@ -56,6 +60,9 @@ def infer_remediation_mode(mvp_category: str) -> str:
     if mvp_category == "sql_injection":
         return "proposal_only"
 
+    if mvp_category == "subprocess_import_info":
+        return "detection_only"
+
     if mvp_category in {
         "command_injection",
         "unsafe_yaml_load",
@@ -71,6 +78,7 @@ def infer_remediation_mode(mvp_category: str) -> str:
 def build_title(mvp_category: str) -> str:
     titles = {
         "command_injection": "Posible command injection",
+        "subprocess_import_info": "Importación de subprocess (aviso informativo)",
         "unsafe_yaml_load": "Uso inseguro de yaml.load",
         "verify_false": "Desactivación de verificación TLS",
         "missing_timeout": "Petición HTTP sin timeout",
@@ -86,6 +94,7 @@ def parse_bandit_result(
     *,
     analysis_target: str | None = None,
 ) -> NormalizedFinding:
+    test_id = result.get("test_id", "")
     mvp_category = infer_mvp_category_from_bandit_result(result)
     remediation_mode = infer_remediation_mode(mvp_category)
 
@@ -93,6 +102,8 @@ def parse_bandit_result(
     line_range = result.get("line_range") or []
     line_start = result.get("line_number", 0)
     line_end = line_range[-1] if line_range else line_start
+
+    title = build_title(mvp_category)
 
     return NormalizedFinding(
         source_tool="bandit",
@@ -102,7 +113,7 @@ def parse_bandit_result(
         line_start=line_start,
         line_end=line_end,
         code_snippet=result.get("code"),
-        title=build_title(mvp_category),
+        title=title,
         description=result.get("issue_text"),
         severity=normalize_bandit_severity(result.get("issue_severity")),
         confidence=normalize_bandit_confidence(result.get("issue_confidence")),

@@ -3,6 +3,7 @@ from pathlib import Path
 from app.models.finding import NormalizedFinding
 from app.services.presentable_scan import (
     build_presentable_scan,
+    filter_presentable_scan,
     presentable_from_internal_analysis,
 )
 
@@ -46,6 +47,45 @@ def test_build_presentable_scan_shape() -> None:
     assert row["remediation"]["mode"] == "proposal_only"
     assert "Solo detección" in row["remediation"]["mode_label"]
     assert row["standards"]["cwe_id"] == 89
+
+
+def test_filter_presentable_scan_hide_info() -> None:
+    scan = {
+        "schema_version": "1.0",
+        "meta": {"analysis_target": "x", "execution_mode": "static_reports"},
+        "summary": {},
+        "findings": [
+            {
+                "id": 1,
+                "severity": "low",
+                "category": "command_injection",
+                "remediation": {"mode": "autofix_candidate"},
+            },
+            {
+                "id": 2,
+                "severity": "high",
+                "category": "command_injection",
+                "remediation": {"mode": "detection_only"},
+            },
+            {
+                "id": 3,
+                "severity": "high",
+                "category": "verify_false",
+                "remediation": {"mode": "autofix_candidate"},
+            },
+        ],
+    }
+
+    out = filter_presentable_scan(scan, hide_info=True)
+
+    assert out["meta"]["presentable_filter"] == "hide_info"
+    assert len(out["findings"]) == 1
+    assert out["findings"][0]["category"] == "verify_false"
+    assert out["findings"][0]["id"] == 1
+    assert out["summary"]["total_findings"] == 1
+
+    unchanged = filter_presentable_scan(scan, hide_info=False)
+    assert unchanged == scan
 
 
 def test_presentable_from_internal_analysis_roundtrip() -> None:
