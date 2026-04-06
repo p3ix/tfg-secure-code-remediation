@@ -134,6 +134,11 @@
   </table>
 
   <footer>
+    {% if hide_info %}
+    <p class="sub"><strong>Vista filtrada.</strong> {{ scan.meta.presentable_filter_note }} <a href="/dashboard">Ver listado completo</a></p>
+    {% else %}
+    <p class="sub"><a href="/dashboard?hide_info=true">Vista demo</a> (oculta solo detección y severidad baja)</p>
+    {% endif %}
     {{ scan.meta.note }}
     · <code>schema_version {{ scan.schema_version }}</code>
     {% if scan.meta.reports %}

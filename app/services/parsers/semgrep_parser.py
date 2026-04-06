@@ -70,6 +70,7 @@ def infer_remediation_mode(mvp_category: str) -> str:
 def build_title(mvp_category: str) -> str:
     titles = {
         "command_injection": "Posible command injection",
+        "subprocess_import_info": "Importación de subprocess (aviso informativo)",
         "unsafe_yaml_load": "Uso inseguro de yaml.load",
         "verify_false": "Desactivación de verificación TLS",
         "missing_timeout": "Petición HTTP sin timeout",

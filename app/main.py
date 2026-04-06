@@ -1,12 +1,15 @@
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from starlette.templating import Jinja2Templates
 
 from app.services.analysis_service import analyze_fixtures_reports
 from app.services.pipeline_orchestrator import run_mvp_autofix_verification_roundtrip
-from app.services.presentable_scan import presentable_from_internal_analysis
+from app.services.presentable_scan import (
+    filter_presentable_scan,
+    presentable_from_internal_analysis,
+)
 from app.services.runtime_analysis_service import analyze_fixtures_runtime
 
 _TEMPLATE_DIR = Path(__file__).resolve().parent / "templates"
@@ -20,21 +23,30 @@ app = FastAPI(
 
 
 @app.get("/", response_class=RedirectResponse)
-def root() -> RedirectResponse:
-    return RedirectResponse(url="/dashboard", status_code=302)
+def root(request: Request) -> RedirectResponse:
+    query = request.url.query
+    target = "/dashboard" + (f"?{query}" if query else "")
+    return RedirectResponse(url=target, status_code=302)
 
 
 @app.get("/dashboard", response_class=HTMLResponse)
-def dashboard(request: Request) -> HTMLResponse:
+def dashboard(
+    request: Request,
+    hide_info: bool = Query(
+        default=False,
+        description="Oculta hallazgos solo detección o severidad baja (vista demo).",
+    ),
+) -> HTMLResponse:
     """Vista HTML del escaneo sobre reports estáticos (misma lógica que /analysis/fixtures/presentable)."""
     try:
         scan = presentable_from_internal_analysis(analyze_fixtures_reports())
+        scan = filter_presentable_scan(scan, hide_info=hide_info)
     except FileNotFoundError as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
     return templates.TemplateResponse(
         request,
         "dashboard.html",
-        {"request": request, "scan": scan},
+        {"request": request, "scan": scan, "hide_info": hide_info},
     )
 
 @app.get("/health")
@@ -50,10 +62,16 @@ def analyze_fixtures() -> dict:
 
 
 @app.get("/analysis/fixtures/presentable")
-def analyze_fixtures_presentable() -> dict:
+def analyze_fixtures_presentable(
+    hide_info: bool = Query(
+        default=False,
+        description="Oculta hallazgos solo detección o severidad baja (vista demo).",
+    ),
+) -> dict:
     """Vista JSON orientada a presentación (sin datos crudos de herramienta)."""
     try:
-        return presentable_from_internal_analysis(analyze_fixtures_reports())
+        scan = presentable_from_internal_analysis(analyze_fixtures_reports())
+        return filter_presentable_scan(scan, hide_info=hide_info)
     except FileNotFoundError as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
@@ -67,10 +85,16 @@ def run_fixtures_analysis() -> dict:
 
 
 @app.post("/analysis/run-fixtures/presentable")
-def run_fixtures_analysis_presentable() -> dict:
+def run_fixtures_analysis_presentable(
+    hide_info: bool = Query(
+        default=False,
+        description="Oculta hallazgos solo detección o severidad baja (vista demo).",
+    ),
+) -> dict:
     """Mismo escaneo que /analysis/run-fixtures, respuesta presentable."""
     try:
-        return presentable_from_internal_analysis(analyze_fixtures_runtime())
+        scan = presentable_from_internal_analysis(analyze_fixtures_runtime())
+        return filter_presentable_scan(scan, hide_info=hide_info)
     except (FileNotFoundError, RuntimeError) as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 

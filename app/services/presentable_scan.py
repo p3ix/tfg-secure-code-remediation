@@ -127,6 +127,52 @@ def presentable_from_internal_analysis(internal: dict[str, Any]) -> dict[str, An
     )
 
 
+def filter_presentable_scan(scan: dict[str, Any], *, hide_info: bool) -> dict[str, Any]:
+    """
+    Vista demo: excluye hallazgos puramente informativos o de baja severidad.
+
+    Criterio cuando hide_info=True: se omiten filas con remediation.mode ==
+    detection_only o severity == low. Recalcula summary y renumera id.
+    """
+    if not hide_info:
+        return scan
+
+    from collections import Counter
+
+    findings = list(scan.get("findings") or [])
+    filtered = [
+        f
+        for f in findings
+        if not (
+            f.get("remediation", {}).get("mode") == "detection_only"
+            or f.get("severity") == "low"
+        )
+    ]
+    by_sev = Counter(f.get("severity") for f in filtered)
+    by_cat = Counter(f.get("category") for f in filtered)
+    by_mode = Counter(f.get("remediation", {}).get("mode") for f in filtered)
+    renumbered = [{**row, "id": i + 1} for i, row in enumerate(filtered)]
+
+    meta = dict(scan.get("meta") or {})
+    meta["presentable_filter"] = "hide_info"
+    meta["presentable_filter_note"] = (
+        "Excluye hallazgos con remediación solo detección o severidad baja. "
+        "Quitar el parámetro hide_info para ver el listado completo."
+    )
+
+    return {
+        **scan,
+        "meta": meta,
+        "summary": {
+            "total_findings": len(renumbered),
+            "by_severity": dict(sorted(by_sev.items())),
+            "by_mvp_category": dict(sorted(by_cat.items())),
+            "by_remediation_mode": dict(sorted(by_mode.items())),
+        },
+        "findings": renumbered,
+    }
+
+
 def _dict_to_normalized(d: dict[str, Any]) -> NormalizedFinding:
     """Reconstruye NormalizedFinding desde asdict (respuesta interna)."""
     return NormalizedFinding(**{k: v for k, v in d.items() if k in NormalizedFinding.__dataclass_fields__})

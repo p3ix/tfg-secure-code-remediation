@@ -50,6 +50,15 @@ def test_missing_timeout_mapping_is_partial() -> None:
     assert enriched.owasp_asvs is None
 
 
+def test_subprocess_import_info_mapping() -> None:
+    finding = build_base_finding("subprocess_import_info")
+
+    enriched = enrich_finding_with_classification(finding)
+
+    assert enriched.cwe_id == 78
+    assert enriched.owasp_top10 == "A05:2025 - Injection"
+
+
 def test_sql_injection_mapping() -> None:
     finding = build_base_finding("sql_injection")
 

@@ -16,3 +16,7 @@ Este documento resume qué hace el sistema con cada categoría del MVP: detecci�
 - Flujo **detect → classify → remediate → verify** demostrable para las categorías con autofix, usando el corpus bajo `fixtures/mvp/`.
 - Categoría SQL injection acotada a **detección y propuesta**, coherente con el alcance.
 - Resultados visibles vía API y vista web mínima (`/dashboard`) además del JSON presentable.
+
+## Duplicados entre herramientas y hallazgos informativos
+
+Para la defensa: varias filas por el mismo fichero pueden deberse a Bandit + Semgrep, o a reglas distintas (p. ej. B404 + B602). El parámetro `hide_info` en la vista presentable reduce ruido para demos. Detalle en [scan-noise-and-duplicates.md](scan-noise-and-duplicates.md).

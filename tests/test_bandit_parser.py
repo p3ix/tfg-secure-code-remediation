@@ -39,6 +39,30 @@ def test_parse_single_bandit_result_verify_false() -> None:
     assert finding.candidate_for_remediation is True
 
 
+def test_parse_bandit_result_b404_in_command_injection_fixture() -> None:
+    result = {
+        "filename": "fixtures/mvp/command_injection/vuln_shell_true.py",
+        "test_id": "B404",
+        "test_name": "blacklist",
+        "issue_severity": "LOW",
+        "issue_confidence": "HIGH",
+        "issue_text": "Consider possible security implications associated with the subprocess module.",
+        "line_number": 1,
+        "line_range": [1],
+        "code": "import subprocess",
+        "more_info": "https://bandit.readthedocs.io/",
+        "issue_cwe": {"id": 78, "link": "https://cwe.mitre.org/data/definitions/78.html"},
+    }
+
+    finding = parse_bandit_result(result)
+
+    assert finding.source_rule_id == "B404"
+    assert finding.mvp_category == "subprocess_import_info"
+    assert finding.remediation_mode == "detection_only"
+    assert finding.candidate_for_remediation is False
+    assert "subprocess" in finding.title.lower() or "informativo" in finding.title.lower()
+
+
 def test_parse_single_bandit_result_sql_injection() -> None:
     result = {
         "filename": "fixtures/mvp/sql_injection/vuln_sql_injection.py",
