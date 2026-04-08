@@ -2,7 +2,11 @@
 
 ## Duplicidad Bandit y Semgrep
 
-Un mismo fichero y línea puede aparecer **dos veces** (o más) porque **Bandit** y **Semgrep** emiten reglas distintas sobre el mismo patrón. Esto no es un fallo del normalizador: el sistema prioriza **trazabilidad** (qué herramienta y qué regla disparó el aviso) frente a deduplicar automáticamente. En la memoria se puede argumentar que una evolución futura podría agrupar por `(fichero, línea, categoría MVP)`.
+Un mismo fichero y línea puede aparecer **dos veces** (o más) porque **Bandit** y **Semgrep** emiten reglas distintas sobre el mismo patrón. Esto no es un fallo del normalizador: por defecto el sistema prioriza **trazabilidad** (qué herramienta y qué regla disparó el aviso), mostrando una fila por hallazgo.
+
+### Parámetro `group_equivalent` (vista agrupada)
+
+Los endpoints presentables y el `/dashboard` admiten **`group_equivalent=true`**: agrupan por `(fichero normalizado, línea, categoría MVP)`, recalculan el resumen por **grupos** y cada fila incluye **`sources`** (todas las herramientas y reglas) y **`group_size`**, sin perder trazabilidad. El modo plano sigue siendo el predeterminado (`group_equivalent=false`). Detalle técnico en [`docs/03_experiments/findings-equivalence-grouping.md`](../03_experiments/findings-equivalence-grouping.md).
 
 ## Bandit B404 (import de `subprocess`)
 

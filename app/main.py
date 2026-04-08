@@ -36,17 +36,29 @@ def dashboard(
         default=False,
         description="Oculta hallazgos solo detección o severidad baja (vista demo).",
     ),
+    group_equivalent: bool = Query(
+        default=False,
+        description="Agrupa hallazgos del mismo fichero/línea/categoría MVP (Bandit+Semgrep).",
+    ),
 ) -> HTMLResponse:
     """Vista HTML del escaneo sobre reports estáticos (misma lógica que /analysis/fixtures/presentable)."""
     try:
-        scan = presentable_from_internal_analysis(analyze_fixtures_reports())
+        scan = presentable_from_internal_analysis(
+            analyze_fixtures_reports(),
+            group_equivalent=group_equivalent,
+        )
         scan = filter_presentable_scan(scan, hide_info=hide_info)
     except FileNotFoundError as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
     return templates.TemplateResponse(
         request,
         "dashboard.html",
-        {"request": request, "scan": scan, "hide_info": hide_info},
+        {
+            "request": request,
+            "scan": scan,
+            "hide_info": hide_info,
+            "group_equivalent": group_equivalent,
+        },
     )
 
 @app.get("/health")
@@ -67,10 +79,17 @@ def analyze_fixtures_presentable(
         default=False,
         description="Oculta hallazgos solo detección o severidad baja (vista demo).",
     ),
+    group_equivalent: bool = Query(
+        default=False,
+        description="Agrupa hallazgos equivalentes (mismo fichero, línea y categoría MVP).",
+    ),
 ) -> dict:
     """Vista JSON orientada a presentación (sin datos crudos de herramienta)."""
     try:
-        scan = presentable_from_internal_analysis(analyze_fixtures_reports())
+        scan = presentable_from_internal_analysis(
+            analyze_fixtures_reports(),
+            group_equivalent=group_equivalent,
+        )
         return filter_presentable_scan(scan, hide_info=hide_info)
     except FileNotFoundError as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
@@ -90,10 +109,17 @@ def run_fixtures_analysis_presentable(
         default=False,
         description="Oculta hallazgos solo detección o severidad baja (vista demo).",
     ),
+    group_equivalent: bool = Query(
+        default=False,
+        description="Agrupa hallazgos equivalentes (mismo fichero, línea y categoría MVP).",
+    ),
 ) -> dict:
     """Mismo escaneo que /analysis/run-fixtures, respuesta presentable."""
     try:
-        scan = presentable_from_internal_analysis(analyze_fixtures_runtime())
+        scan = presentable_from_internal_analysis(
+            analyze_fixtures_runtime(),
+            group_equivalent=group_equivalent,
+        )
         return filter_presentable_scan(scan, hide_info=hide_info)
     except (FileNotFoundError, RuntimeError) as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc

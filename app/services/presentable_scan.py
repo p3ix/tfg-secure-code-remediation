@@ -4,6 +4,11 @@ from datetime import UTC, datetime
 from typing import Any
 
 from app.models.finding import NormalizedFinding
+from app.services.findings_dedup import (
+    group_findings_by_equivalence,
+    max_severity,
+    primary_finding,
+)
 
 SCHEMA_VERSION = "1.0"
 
@@ -52,26 +57,81 @@ def _finding_to_presentable_row(index: int, f: NormalizedFinding) -> dict[str, A
     }
 
 
+def _group_to_presentable_row(index: int, group: list[NormalizedFinding]) -> dict[str, Any]:
+    """Una fila por grupo; severidad = máxima del grupo; `sources` lista todas las herramientas."""
+    primary = primary_finding(group)
+    sev = max_severity(group)
+    mode = primary.remediation_mode
+    title = primary.title or primary.mvp_category.replace("_", " ").title()
+    sources = [
+        {
+            "tool": f.source_tool,
+            "rule_id": f.source_rule_id,
+            "rule_name": f.source_rule_name,
+        }
+        for f in group
+    ]
+    row: dict[str, Any] = {
+        "id": index,
+        "title": title,
+        "severity": sev,
+        "severity_label": SEVERITY_LABELS.get(sev, sev),
+        "category": primary.mvp_category,
+        "file": primary.file_path,
+        "line_start": primary.line_start,
+        "line_end": primary.line_end,
+        "tool": primary.source_tool,
+        "rule_id": primary.source_rule_id,
+        "rule_name": primary.source_rule_name,
+        "message": (primary.description or primary.raw_message or "")[:2000],
+        "standards": {
+            "cwe_id": primary.cwe_id,
+            "cwe_url": primary.cwe_url,
+            "owasp_top10": primary.owasp_top10,
+            "owasp_asvs": primary.owasp_asvs,
+        },
+        "remediation": {
+            "mode": mode,
+            "mode_label": REMEDIATION_MODE_LABELS.get(mode, mode),
+            "candidate": primary.candidate_for_remediation,
+        },
+        "reference_url": primary.reference_url,
+        "sources": sources,
+        "group_size": len(group),
+    }
+    return row
+
+
 def build_presentable_scan(
     findings: list[NormalizedFinding],
     *,
     analysis_target: str,
     execution_mode: str,
     reports: dict[str, str] | None = None,
+    group_equivalent: bool = False,
 ) -> dict[str, Any]:
     """
     JSON estable para vista previa / memoria: sin raw_tool_data, mensajes acotados.
+
+    Si group_equivalent=True, agrupa hallazgos con mismo fichero, línea y mvp_category
+    y añade `sources` + `group_size` en cada fila.
     """
     from collections import Counter
 
-    by_sev = Counter(f.severity for f in findings)
-    by_cat = Counter(f.mvp_category for f in findings)
-    by_mode = Counter(f.remediation_mode for f in findings)
-
-    rows = [
-        _finding_to_presentable_row(i + 1, f)
-        for i, f in enumerate(findings)
-    ]
+    if group_equivalent:
+        groups = group_findings_by_equivalence(findings)
+        by_sev = Counter(max_severity(g) for g in groups)
+        by_cat = Counter(primary_finding(g).mvp_category for g in groups)
+        by_mode = Counter(primary_finding(g).remediation_mode for g in groups)
+        rows = [_group_to_presentable_row(i + 1, g) for i, g in enumerate(groups)]
+    else:
+        by_sev = Counter(f.severity for f in findings)
+        by_cat = Counter(f.mvp_category for f in findings)
+        by_mode = Counter(f.remediation_mode for f in findings)
+        rows = [
+            _finding_to_presentable_row(i + 1, f)
+            for i, f in enumerate(findings)
+        ]
 
     payload: dict[str, Any] = {
         "schema_version": SCHEMA_VERSION,
@@ -85,7 +145,7 @@ def build_presentable_scan(
             ),
         },
         "summary": {
-            "total_findings": len(findings),
+            "total_findings": len(rows),
             "by_severity": dict(sorted(by_sev.items())),
             "by_mvp_category": dict(sorted(by_cat.items())),
             "by_remediation_mode": dict(sorted(by_mode.items())),
@@ -93,13 +153,24 @@ def build_presentable_scan(
         "findings": rows,
     }
 
+    if group_equivalent:
+        payload["meta"]["group_equivalent"] = True
+        payload["meta"]["group_equivalent_note"] = (
+            "Hallazgos agrupados por fichero, línea y categoría MVP; "
+            "cada fila puede listar varias fuentes (Bandit/Semgrep) en `sources`."
+        )
+
     if reports:
         payload["meta"]["reports"] = reports
 
     return payload
 
 
-def presentable_from_internal_analysis(internal: dict[str, Any]) -> dict[str, Any]:
+def presentable_from_internal_analysis(
+    internal: dict[str, Any],
+    *,
+    group_equivalent: bool = False,
+) -> dict[str, Any]:
     """
     Convierte la respuesta interna de analyze_fixtures_reports / analyze_fixtures_runtime
     (con claves findings como listas de dict) en presentable.
@@ -124,6 +195,7 @@ def presentable_from_internal_analysis(internal: dict[str, Any]) -> dict[str, An
         analysis_target=str(internal.get("analysis_target", "")),
         execution_mode=execution_mode,
         reports=reports,
+        group_equivalent=group_equivalent,
     )
 
 
