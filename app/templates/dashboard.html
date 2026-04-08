@@ -70,6 +70,7 @@
     Objetivo: <code>{{ scan.meta.analysis_target }}</code>
     · Modo: <code>{{ scan.meta.execution_mode }}</code>
     · Generado: {{ scan.meta.generated_at }}
+    {% if scan.meta.group_equivalent %}· <strong>Vista agrupada</strong> (mismo fichero/línea/categoría){% endif %}
   </p>
 
   <div class="grid">
@@ -119,7 +120,15 @@
         <td class="sev-{{ row.severity }}">{{ row.severity_label }}</td>
         <td><code>{{ row.category }}</code></td>
         <td><small>{{ row.file }}:{{ row.line_start }}</small></td>
-        <td>{{ row.tool }}<br/><small>{{ row.rule_id }}</small></td>
+        <td>
+          {% if row.sources is defined and row.sources|length > 1 %}
+            {% for s in row.sources %}
+              {{ s.tool }}<br/><small>{{ s.rule_id }}</small>{% if not loop.last %}<br/>{% endif %}
+            {% endfor %}
+          {% else %}
+            {{ row.tool }}<br/><small>{{ row.rule_id }}</small>
+          {% endif %}
+        </td>
         <td><small>{{ row.remediation.mode_label }}</small></td>
         <td>
           {% if row.standards.cwe_id %}
@@ -134,11 +143,20 @@
   </table>
 
   <footer>
-    {% if hide_info %}
-    <p class="sub"><strong>Vista filtrada.</strong> {{ scan.meta.presentable_filter_note }} <a href="/dashboard">Ver listado completo</a></p>
-    {% else %}
-    <p class="sub"><a href="/dashboard?hide_info=true">Vista demo</a> (oculta solo detección y severidad baja)</p>
-    {% endif %}
+    <p class="sub">
+      {% if group_equivalent %}
+      <a href="/dashboard{% if hide_info %}?hide_info=true{% endif %}">Sin agrupar equivalentes</a>
+      {% else %}
+      <a href="/dashboard?group_equivalent=true{% if hide_info %}&hide_info=true{% endif %}">Agrupar equivalentes</a>
+      {% endif %}
+      ·
+      {% if hide_info %}
+      <a href="/dashboard{% if group_equivalent %}?group_equivalent=true{% endif %}">Listado completo (sin filtro demo)</a>
+      · <strong>Vista filtrada.</strong> {{ scan.meta.presentable_filter_note }}
+      {% else %}
+      <a href="/dashboard?hide_info=true{% if group_equivalent %}&group_equivalent=true{% endif %}">Vista demo</a> (oculta solo detección y severidad baja)
+      {% endif %}
+    </p>
     {{ scan.meta.note }}
     · <code>schema_version {{ scan.schema_version }}</code>
     {% if scan.meta.reports %}
