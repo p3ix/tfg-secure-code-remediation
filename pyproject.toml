@@ -1,15 +1,35 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "tfg-secure-code-remediation"
 version = "0.1.0"
 description = "Web app para análisis y remediación asistida por IA de vulnerabilidades en proyectos Python"
 requires-python = ">=3.12"
 dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
     "jinja2>=3.1",
+    "python-multipart>=0.0.9",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+    "httpx>=0.27",
+    "bandit[toml]>=1.7",
+    "semgrep>=1",
+    "pre-commit>=3",
 ]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["app*"]
 
 [tool.bandit]
 exclude_dirs = [".venv", "tests", "docs"]

@@ -175,3 +175,7 @@ Estas releases no deben entenderse como versiones comerciales del producto, sino
 Con este documento dejo cerrada la planificación inicial del TFG a nivel metodológico. A partir de esta base, el siguiente paso será centrar el trabajo en la implementación técnica del núcleo del proyecto, comenzando por la preparación de ejemplos vulnerables y la integración del análisis estático con Bandit y Semgrep.
 
 El objetivo es avanzar sobre una base de trabajo ya ordenada, con alcance acotado, arquitectura definida y una metodología suficiente para mantener el proyecto controlado y defendible.
+
+## 12. Hoja de ruta por fases y ritual de documentación (actualización)
+
+A partir de la fase inicial del TFG, la planificación se complementa con un documento dedicado que describe **fases** (base limpia, análisis de proyectos reales, IA), el **ritual** por hito (issues, documentación en `docs/`) y la **cadencia de la memoria** en `docs/07_memoria/`. Ver [`docs/01_roadmap_and_documentation_ritual.md`](01_roadmap_and_documentation_ritual.md).
