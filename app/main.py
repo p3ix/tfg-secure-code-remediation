@@ -1,10 +1,23 @@
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi import (
+    FastAPI,
+    File,
+    HTTPException,
+    Query,
+    Request,
+    UploadFile,
+)
 from fastapi.responses import HTMLResponse, RedirectResponse
+from pydantic import BaseModel, Field
 from starlette.templating import Jinja2Templates
 
+from app.config import get_settings
 from app.services.analysis_service import analyze_fixtures_reports
+from app.services.project_scan_service import (
+    analyze_zip_bytes,
+    clone_and_analyze_repo,
+)
 from app.services.pipeline_orchestrator import run_mvp_autofix_verification_roundtrip
 from app.services.presentable_scan import (
     filter_presentable_scan,
@@ -64,6 +77,63 @@ def dashboard(
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+class GitCloneRequest(BaseModel):
+    url: str = Field(
+        ...,
+        min_length=12,
+        description="URL https:// del repositorio Git (p. ej. GitHub/GitLab público).",
+    )
+
+
+@app.post("/analysis/upload-zip")
+async def analysis_upload_zip(
+    file: UploadFile = File(..., description="ZIP con código fuente a analizar"),
+) -> dict:
+    """
+    Extrae el ZIP de forma acotada y ejecuta Bandit + Semgrep sobre el contenido.
+    Límite de tamaño: variable de entorno `TFG_ZIP_MAX_BYTES` (por defecto ~20 MB).
+    """
+    content = await file.read()
+    try:
+        return analyze_zip_bytes(content)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+@app.post("/analysis/git-clone")
+def analysis_git_clone(body: GitCloneRequest) -> dict:
+    """
+    Clona un repositorio HTTPS con `git clone --depth 1` y analiza el resultado.
+    Hosts permitidos: `TFG_GIT_ALLOWED_HOSTS` (por defecto github.com, gitlab.com).
+    Desactivar: `TFG_ENABLE_GIT_CLONE=0`.
+    """
+    try:
+        return clone_and_analyze_repo(body.url)
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+@app.get("/ai/status")
+def ai_status() -> dict:
+    """Estado de la capa IA opcional (explicaciones / asistencia); ver ADR-002."""
+    s = get_settings()
+    return {
+        "ai_explanations_enabled": s.ai_explanations_enabled,
+        "git_clone_enabled": s.enable_git_clone,
+        "message": (
+            "Capa IA de explicación en roadmap (ADR-002); el núcleo MVP no depende "
+            "de un modelo generativo."
+        ),
+        "documentation": "docs/02_decisions/ADR-002-ai-assisted-roadmap.md",
+    }
 
 @app.get("/analysis/fixtures")
 def analyze_fixtures() -> dict:
