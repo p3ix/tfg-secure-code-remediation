@@ -128,6 +128,36 @@ def analyze_directory(
         }
 
 
+def resolve_allowed_analysis_path(relative_path: str, allowed_root: Path) -> Path:
+    """
+    Resuelve una ruta relativa estrictamente bajo ``allowed_root`` (sin ``..``).
+    """
+    if not relative_path or relative_path.strip() != relative_path:
+        raise ValueError("Ruta relativa inválida")
+    p = Path(relative_path)
+    if p.is_absolute():
+        raise ValueError("La ruta debe ser relativa al directorio permitido (no rutas absolutas)")
+    if ".." in p.parts:
+        raise ValueError("La ruta no puede contener componentes '..'")
+    root_res = allowed_root.resolve()
+    target = (root_res / p).resolve()
+    try:
+        target.relative_to(root_res)
+    except ValueError as exc:
+        raise ValueError(
+            "La ruta debe permanecer bajo el directorio raíz permitido"
+        ) from exc
+    if not target.is_dir():
+        raise FileNotFoundError(f"No es un directorio o no existe: {target}")
+    return target
+
+
+def analyze_local_path_relative(relative_path: str, *, allowed_root: Path) -> dict[str, Any]:
+    target = resolve_allowed_analysis_path(relative_path, allowed_root)
+    label = f"local:{relative_path}"
+    return analyze_directory(target, analysis_target_label=label)
+
+
 def analyze_zip_bytes(zip_bytes: bytes) -> dict[str, Any]:
     settings = get_settings()
     if len(zip_bytes) > settings.zip_max_bytes:

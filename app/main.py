@@ -15,6 +15,7 @@ from starlette.templating import Jinja2Templates
 from app.config import get_settings
 from app.services.analysis_service import analyze_fixtures_reports
 from app.services.project_scan_service import (
+    analyze_local_path_relative,
     analyze_zip_bytes,
     clone_and_analyze_repo,
 )
@@ -87,6 +88,14 @@ class GitCloneRequest(BaseModel):
     )
 
 
+class LocalPathRequest(BaseModel):
+    relative_path: str = Field(
+        ...,
+        min_length=1,
+        description="Ruta relativa dentro de TFG_LOCAL_ANALYSIS_ROOT (sin ..).",
+    )
+
+
 @app.post("/analysis/upload-zip")
 async def analysis_upload_zip(
     file: UploadFile = File(..., description="ZIP con código fuente a analizar"),
@@ -121,6 +130,33 @@ def analysis_git_clone(body: GitCloneRequest) -> dict:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
+@app.post("/analysis/local-path")
+def analysis_local_path(body: LocalPathRequest) -> dict:
+    """
+    Analiza un directorio bajo una ruta base fijada en el servidor (`TFG_LOCAL_ANALYSIS_ROOT`).
+    Solo disponible si esa variable está definida; evita rutas arbitrarias en el sistema de ficheros.
+    """
+    s = get_settings()
+    if s.local_analysis_root is None:
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                "Análisis por ruta local desactivado: definir la variable de entorno "
+                "TFG_LOCAL_ANALYSIS_ROOT con un directorio permitido."
+            ),
+        )
+    try:
+        return analyze_local_path_relative(
+            body.relative_path, allowed_root=s.local_analysis_root
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
 @app.get("/ai/status")
 def ai_status() -> dict:
     """Estado de la capa IA opcional (explicaciones / asistencia); ver ADR-002."""
@@ -128,6 +164,7 @@ def ai_status() -> dict:
     return {
         "ai_explanations_enabled": s.ai_explanations_enabled,
         "git_clone_enabled": s.enable_git_clone,
+        "local_analysis_root_configured": s.local_analysis_root is not None,
         "message": (
             "Capa IA de explicación en roadmap (ADR-002); el núcleo MVP no depende "
             "de un modelo generativo."

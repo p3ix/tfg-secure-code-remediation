@@ -6,7 +6,7 @@ Aplicación web para análisis y remediación asistida por IA de vulnerabilidade
 
 El **MVP** sobre `fixtures/mvp/` está operativo: detección con Bandit y Semgrep, modelo normalizado de hallazgos, clasificación CWE/OWASP/ASVS, remediación asistida con verificación en patrones acotados, pipeline, dashboard y JSON presentable (incl. agrupación opcional `group_equivalent`).
 
-En **ampliación**: análisis de **proyectos reales** (subida ZIP, clonado Git HTTPS acotado), capa **IA** opcional documentada en [`docs/02_decisions/ADR-002-ai-assisted-roadmap.md`](docs/02_decisions/ADR-002-ai-assisted-roadmap.md).
+En **ampliación**: análisis de **proyectos reales** (subida ZIP, ruta local bajo directorio permitido, clonado Git HTTPS acotado), capa **IA** opcional documentada en [`docs/02_decisions/ADR-002-ai-assisted-roadmap.md`](docs/02_decisions/ADR-002-ai-assisted-roadmap.md).
 
 ## Documentación clave
 
@@ -54,11 +54,12 @@ uvicorn app.main:app --reload
 ### Análisis de proyectos reales (nuevo)
 
 - `POST /analysis/upload-zip` — cuerpo: fichero `multipart/form-data` (campo típico `file`). Límite por defecto ~20 MB (`TFG_ZIP_MAX_BYTES`).
+- `POST /analysis/local-path` — JSON `{"relative_path": "mi-proyecto"}`: analiza un subdirectorio **relativo** bajo `TFG_LOCAL_ANALYSIS_ROOT` (definir en el servidor; sin rutas absolutas ni `..`). Si la variable no está definida, el endpoint responde 403.
 - `POST /analysis/git-clone` — JSON `{"url": "https://github.com/org/repo"}` (HTTPS, hosts permitidos por `TFG_GIT_ALLOWED_HOSTS`). Desactivar clonado con `TFG_ENABLE_GIT_CLONE=0`.
 
 ### Estado de la capa IA (roadmap)
 
-- `GET /ai/status` — indica si las explicaciones IA están habilitadas (`TFG_AI_EXPLANATIONS_ENABLED`).
+- `GET /ai/status` — indica si las explicaciones IA están habilitadas (`TFG_AI_EXPLANATIONS_ENABLED`) y si hay raíz local configurada para `/analysis/local-path`.
 
 ## Tests
 

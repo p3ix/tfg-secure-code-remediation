@@ -31,6 +31,7 @@ El núcleo inicial se valida sobre **fixtures** bajo `fixtures/mvp/`, con vulner
 Además del corpus interno, el sistema puede analizar **código real** suministrado como:
 
 - **Archivo ZIP** subido por API (`POST /analysis/upload-zip`), con límites de tamaño y extracción segura (sin path traversal).
+- **Ruta local bajo control** (`POST /analysis/local-path`): el servidor expone solo subdirectorios relativos respecto a una raíz fijada en configuración (`TFG_LOCAL_ANALYSIS_ROOT`), sin rutas arbitrarias del sistema de ficheros.
 - **Repositorio Git HTTPS** clonado de forma superficial (`POST /analysis/git-clone`), con hosts permitidos por configuración (`TFG_GIT_ALLOWED_HOSTS`), timeout y **solo en entornos de confianza** (el clonado puede desactivarse con `TFG_ENABLE_GIT_CLONE=0`).
 
 Riesgos y límites (licencias, datos sensibles, tiempo de análisis) deben documentarse en la memoria y, si aplica, en issues de seguridad.

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 from functools import lru_cache
+from pathlib import Path
 
 
 @lru_cache
@@ -24,3 +25,7 @@ class Settings:
         )
         self.enable_git_clone: bool = os.environ.get("TFG_ENABLE_GIT_CLONE", "1") == "1"
         self.ai_explanations_enabled: bool = os.environ.get("TFG_AI_EXPLANATIONS_ENABLED", "0") == "1"
+        _local_root = os.environ.get("TFG_LOCAL_ANALYSIS_ROOT", "").strip()
+        self.local_analysis_root: Path | None = (
+            Path(_local_root).resolve() if _local_root else None
+        )

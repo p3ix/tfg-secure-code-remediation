@@ -9,7 +9,7 @@ Este documento fija la **hoja de ruta por fases** (base limpia → análisis rea
 | Fase | Enfoque | Evidencia típica |
 |------|---------|------------------|
 | **1 — Base limpia** | README, dependencias, CI, alcance actualizado | PR + `docs/00_scope.md` |
-| **2 — Análisis real** | Proyectos locales, ZIP, clonado Git con límites | `docs/03_experiments/`, endpoints documentados en OpenAPI |
+| **2 — Análisis real** | ZIP, ruta relativa bajo `TFG_LOCAL_ANALYSIS_ROOT`, clonado Git con límites | `docs/03_experiments/`, endpoints documentados en OpenAPI |
 | **3 — IA** | Explicación o remediación asistida con supervisión humana | ADR, `docs/05_remediations/` o `docs/02_decisions/`, variables de entorno documentadas |
 
 Las fases no son exclusivas en el tiempo: puede haber iteración dentro de cada una.
