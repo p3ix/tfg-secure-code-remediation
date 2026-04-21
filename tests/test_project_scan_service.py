@@ -55,6 +55,8 @@ def test_ai_status_endpoint() -> None:
     data = r.json()
     assert "ai_explanations_enabled" in data
     assert "local_analysis_root_configured" in data
+    assert "analysis_subprocess_timeout_sec" in data
+    assert "analysis_exclude_patterns_count" in data
     assert "documentation" in data
 
 

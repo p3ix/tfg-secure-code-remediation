@@ -6,6 +6,13 @@ import os
 from functools import lru_cache
 from pathlib import Path
 
+# Bandit `-x` acepta lista separada por comas (globs). Semgrep usa la misma
+# lista para generar varios `--exclude` (ver `build_semgrep_command`).
+_DEFAULT_ANALYSIS_EXCLUDE_DIRS = (
+    ".git,.svn,CVS,.bzr,.hg,node_modules,__pycache__,.venv,venv,.tox,.eggs,"
+    "*.egg,dist,build,.mypy_cache,.pytest_cache"
+)
+
 
 @lru_cache
 def get_settings() -> "Settings":
@@ -28,4 +35,12 @@ class Settings:
         _local_root = os.environ.get("TFG_LOCAL_ANALYSIS_ROOT", "").strip()
         self.local_analysis_root: Path | None = (
             Path(_local_root).resolve() if _local_root else None
+        )
+        # Por subproceso (Bandit o Semgrep). 0 = sin límite (solo entornos controlados).
+        self.analysis_subprocess_timeout_sec: int = int(
+            os.environ.get("TFG_ANALYSIS_TIMEOUT_SEC", "600")
+        )
+        _exclude = os.environ.get("TFG_ANALYSIS_EXCLUDE_DIRS", _DEFAULT_ANALYSIS_EXCLUDE_DIRS)
+        self.analysis_exclude_patterns: tuple[str, ...] = tuple(
+            p.strip() for p in _exclude.split(",") if p.strip()
         )

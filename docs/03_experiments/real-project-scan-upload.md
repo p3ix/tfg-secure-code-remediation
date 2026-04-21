@@ -12,7 +12,12 @@ Documentar la primera ampliación del TFG más allá del corpus `fixtures/mvp/`:
 
 ## Implementación
 
-Código en [`app/services/project_scan_service.py`](../../app/services/project_scan_service.py); configuración en [`app/config.py`](../../app/config.py).
+Código en [`app/services/project_scan_service.py`](../../app/services/project_scan_service.py); configuración en [`app/config.py`](../../app/config.py). Los subprocesos Bandit y Semgrep comparten un límite de tiempo configurable (`TFG_ANALYSIS_TIMEOUT_SEC`, ver [`app/services/runtime_analysis_service.py`](../../app/services/runtime_analysis_service.py) y `run_analysis_command`).
+
+## Exclusiones en proyectos grandes
+
+- **Variable `TFG_ANALYSIS_EXCLUDE_DIRS`:** lista separada por comas (por defecto incluye `.git`, `node_modules`, `__pycache__`, `.venv`, `venv`, `dist`, `build`, caches, etc.). El backend traduce eso a la opción **`-x`** de Bandit y a varias banderas **`--exclude=...`** de Semgrep, para no recorrer directorios pesados o ajenos al código propio.
+- **Fichero `.semgrepignore`:** Semgrep (oficialmente) puede leer un fichero llamado **`.semgrepignore`** en el directorio que se escanea, con sintaxis inspirada en `.gitignore`, para **omitir rutas** adicionales (tests generados, assets, etc.). Ese fichero pertenece al **proyecto analizado** (por ejemplo dentro de un repo clonado), no al TFG. Si existe, **se aplica en paralelo** a las exclusiones del backend: no sustituye la variable, las reglas se combinan.
 
 ## Riesgos
 

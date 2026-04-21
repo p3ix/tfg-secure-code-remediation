@@ -34,7 +34,7 @@ Además del corpus interno, el sistema puede analizar **código real** suministr
 - **Ruta local bajo control** (`POST /analysis/local-path`): el servidor expone solo subdirectorios relativos respecto a una raíz fijada en configuración (`TFG_LOCAL_ANALYSIS_ROOT`), sin rutas arbitrarias del sistema de ficheros.
 - **Repositorio Git HTTPS** clonado de forma superficial (`POST /analysis/git-clone`), con hosts permitidos por configuración (`TFG_GIT_ALLOWED_HOSTS`), timeout y **solo en entornos de confianza** (el clonado puede desactivarse con `TFG_ENABLE_GIT_CLONE=0`).
 
-Riesgos y límites (licencias, datos sensibles, tiempo de análisis) deben documentarse en la memoria y, si aplica, en issues de seguridad.
+Riesgos y límites (licencias, datos sensibles, tiempo de análisis) deben documentarse en la memoria y, si aplica, en issues de seguridad. El tiempo por invocación de Bandit y Semgrep está acotado con `TFG_ANALYSIS_TIMEOUT_SEC` (por defecto 600 s por herramienta; `0` desactiva el límite, solo en entornos controlados). Para reducir carga en árboles grandes, `TFG_ANALYSIS_EXCLUDE_DIRS` alimenta exclusiones comunes (p. ej. `node_modules`, `.venv`) a Bandit y Semgrep; Semgrep también aplica `.semgrepignore` si existe en el proyecto analizado.
 
 ## Ampliación — IA (roadmap)
 - Explicación de hallazgos o sugerencias de parche mediante modelo **opcional**, desactivado por defecto (`TFG_AI_EXPLANATIONS_ENABLED`).

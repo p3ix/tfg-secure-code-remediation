@@ -23,7 +23,7 @@ from app.services.pipeline_orchestrator import build_pipeline_view
 from app.services.runtime_analysis_service import (
     build_bandit_command,
     build_semgrep_command,
-    run_command,
+    run_analysis_command,
 )
 
 
@@ -87,8 +87,8 @@ def analyze_directory(
         bandit_cmd = build_bandit_command(root, bandit_report)
         semgrep_cmd = build_semgrep_command(root, semgrep_report)
 
-        bandit_result = run_command(bandit_cmd)
-        semgrep_result = run_command(semgrep_cmd)
+        bandit_result = run_analysis_command(bandit_cmd)
+        semgrep_result = run_analysis_command(semgrep_cmd)
 
         if not bandit_report.exists():
             raise RuntimeError(

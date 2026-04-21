@@ -165,6 +165,8 @@ def ai_status() -> dict:
         "ai_explanations_enabled": s.ai_explanations_enabled,
         "git_clone_enabled": s.enable_git_clone,
         "local_analysis_root_configured": s.local_analysis_root is not None,
+        "analysis_subprocess_timeout_sec": s.analysis_subprocess_timeout_sec,
+        "analysis_exclude_patterns_count": len(s.analysis_exclude_patterns),
         "message": (
             "Capa IA de explicación en roadmap (ADR-002); el núcleo MVP no depende "
             "de un modelo generativo."
