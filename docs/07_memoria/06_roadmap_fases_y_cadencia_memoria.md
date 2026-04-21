@@ -11,7 +11,7 @@ Los detalles operativos están en [`docs/01_roadmap_and_documentation_ritual.md`
 | Fase | Contenido |
 |------|-----------|
 | **1 — Base limpia** | Repositorio legible, README, CI, alcance coherente con el código. |
-| **2 — Análisis real** | Proyectos reales: subida ZIP, clonado Git acotado, mismos analizadores que el MVP sobre fixtures. |
+| **2 — Análisis real** | Proyectos reales: subida ZIP, ruta relativa bajo `TFG_LOCAL_ANALYSIS_ROOT`, clonado Git acotado; mismos analizadores que el MVP sobre fixtures. |
 | **3 — IA** | Capa opcional de explicación o sugerencias, con supervisión humana y variables de entorno documentadas (ADR-002). |
 
 Estas fases **no sustituyen** los capítulos ya redactados sobre el MVP (evolución, introducción, marco teórico, resultados, conclusiones), sino que **amplían** el relato conforme avance el repositorio.

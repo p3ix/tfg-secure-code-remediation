@@ -23,7 +23,7 @@ from app.services.pipeline_orchestrator import build_pipeline_view
 from app.services.runtime_analysis_service import (
     build_bandit_command,
     build_semgrep_command,
-    run_command,
+    run_analysis_command,
 )
 
 
@@ -87,8 +87,8 @@ def analyze_directory(
         bandit_cmd = build_bandit_command(root, bandit_report)
         semgrep_cmd = build_semgrep_command(root, semgrep_report)
 
-        bandit_result = run_command(bandit_cmd)
-        semgrep_result = run_command(semgrep_cmd)
+        bandit_result = run_analysis_command(bandit_cmd)
+        semgrep_result = run_analysis_command(semgrep_cmd)
 
         if not bandit_report.exists():
             raise RuntimeError(
@@ -126,6 +126,36 @@ def analyze_directory(
             "findings": [asdict(f) for f in enriched],
             "pipeline": build_pipeline_view(enriched),
         }
+
+
+def resolve_allowed_analysis_path(relative_path: str, allowed_root: Path) -> Path:
+    """
+    Resuelve una ruta relativa estrictamente bajo ``allowed_root`` (sin ``..``).
+    """
+    if not relative_path or relative_path.strip() != relative_path:
+        raise ValueError("Ruta relativa inválida")
+    p = Path(relative_path)
+    if p.is_absolute():
+        raise ValueError("La ruta debe ser relativa al directorio permitido (no rutas absolutas)")
+    if ".." in p.parts:
+        raise ValueError("La ruta no puede contener componentes '..'")
+    root_res = allowed_root.resolve()
+    target = (root_res / p).resolve()
+    try:
+        target.relative_to(root_res)
+    except ValueError as exc:
+        raise ValueError(
+            "La ruta debe permanecer bajo el directorio raíz permitido"
+        ) from exc
+    if not target.is_dir():
+        raise FileNotFoundError(f"No es un directorio o no existe: {target}")
+    return target
+
+
+def analyze_local_path_relative(relative_path: str, *, allowed_root: Path) -> dict[str, Any]:
+    target = resolve_allowed_analysis_path(relative_path, allowed_root)
+    label = f"local:{relative_path}"
+    return analyze_directory(target, analysis_target_label=label)
 
 
 def analyze_zip_bytes(zip_bytes: bytes) -> dict[str, Any]:

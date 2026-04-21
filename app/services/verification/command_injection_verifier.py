@@ -11,7 +11,7 @@ from app.services.remediations.command_injection_remediator import (
 from app.services.runtime_analysis_service import (
     build_bandit_command,
     build_semgrep_command,
-    run_command,
+    run_analysis_command,
 )
 
 
@@ -41,8 +41,8 @@ def verify_command_injection_remediation(source_code: str) -> dict:
         bandit_cmd = build_bandit_command(target_dir, bandit_report)
         semgrep_cmd = build_semgrep_command(target_dir, semgrep_report)
 
-        bandit_result = run_command(bandit_cmd)
-        semgrep_result = run_command(semgrep_cmd)
+        bandit_result = run_analysis_command(bandit_cmd)
+        semgrep_result = run_analysis_command(semgrep_cmd)
 
         if not bandit_report.exists():
             raise RuntimeError(

@@ -6,7 +6,7 @@ Aplicación web para análisis y remediación asistida por IA de vulnerabilidade
 
 El **MVP** sobre `fixtures/mvp/` está operativo: detección con Bandit y Semgrep, modelo normalizado de hallazgos, clasificación CWE/OWASP/ASVS, remediación asistida con verificación en patrones acotados, pipeline, dashboard y JSON presentable (incl. agrupación opcional `group_equivalent`).
 
-En **ampliación**: análisis de **proyectos reales** (subida ZIP, clonado Git HTTPS acotado), capa **IA** opcional documentada en [`docs/02_decisions/ADR-002-ai-assisted-roadmap.md`](docs/02_decisions/ADR-002-ai-assisted-roadmap.md).
+En **ampliación**: análisis de **proyectos reales** (subida ZIP, ruta local bajo directorio permitido, clonado Git HTTPS acotado), capa **IA** opcional documentada en [`docs/02_decisions/ADR-002-ai-assisted-roadmap.md`](docs/02_decisions/ADR-002-ai-assisted-roadmap.md).
 
 ## Documentación clave
 
@@ -54,11 +54,16 @@ uvicorn app.main:app --reload
 ### Análisis de proyectos reales (nuevo)
 
 - `POST /analysis/upload-zip` — cuerpo: fichero `multipart/form-data` (campo típico `file`). Límite por defecto ~20 MB (`TFG_ZIP_MAX_BYTES`).
+- `POST /analysis/local-path` — JSON `{"relative_path": "mi-proyecto"}`: analiza un subdirectorio **relativo** bajo `TFG_LOCAL_ANALYSIS_ROOT` (definir en el servidor; sin rutas absolutas ni `..`). Si la variable no está definida, el endpoint responde 403.
 - `POST /analysis/git-clone` — JSON `{"url": "https://github.com/org/repo"}` (HTTPS, hosts permitidos por `TFG_GIT_ALLOWED_HOSTS`). Desactivar clonado con `TFG_ENABLE_GIT_CLONE=0`.
+
+Variables útiles: `TFG_ZIP_MAX_BYTES`, `TFG_LOCAL_ANALYSIS_ROOT`, `TFG_GIT_CLONE_TIMEOUT`, `TFG_ANALYSIS_TIMEOUT_SEC` (segundos **por** invocación de Bandit y de Semgrep; por defecto 600; `0` = sin límite), `TFG_ANALYSIS_EXCLUDE_DIRS` (lista separada por comas de directorios o globs para Bandit `-x` y exclusiones Semgrep; ver experimento en `docs/03_experiments/`).
+
+**`.semgrepignore`:** si el proyecto analizado incluye un fichero `.semgrepignore` en su raíz (p. ej. tras un `git clone`), **Semgrep lo respeta** además de las exclusiones que añade el backend vía `--exclude`. No es un fichero que este repositorio tenga que commitear por defecto; sirve en **el código del proyecto escaneado**.
 
 ### Estado de la capa IA (roadmap)
 
-- `GET /ai/status` — indica si las explicaciones IA están habilitadas (`TFG_AI_EXPLANATIONS_ENABLED`).
+- `GET /ai/status` — explicaciones IA (`TFG_AI_EXPLANATIONS_ENABLED`), raíz local, y timeout de análisis (`analysis_subprocess_timeout_sec`).
 
 ## Tests
 

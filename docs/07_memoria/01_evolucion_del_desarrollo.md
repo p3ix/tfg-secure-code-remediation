@@ -94,6 +94,12 @@ Lo que queda para la **memoria escrita** no es repetir el código línea a líne
 
 ---
 
+## 9. De fixtures sintéticos a proyectos reales
+
+Tras consolidar el MVP sobre `fixtures/mvp/`, el siguiente paso defendible fue **salir del corpus controlado** sin abrir el servidor a rutas arbitrarias. Se implementaron tres vías complementarias: subida de un **ZIP** con extracción acotada y comprobación anti path-traversal; análisis bajo una **raíz local** configurable (`TFG_LOCAL_ANALYSIS_ROOT`) aceptando solo rutas relativas validadas; y **clonado Git** HTTPS con lista de hosts permitidos y timeout de clonado. En todos los casos se reutiliza el mismo pipeline **Bandit + Semgrep** que ya había validado los fixtures, y se añadieron **límites de tiempo por subproceso** para reducir el riesgo de que un árbol de ficheros enorme bloquee indefinidamente el backend. Para proyectos voluminosos se configuró además una lista de **exclusiones** (`TFG_ANALYSIS_EXCLUDE_DIRS`) que alimenta Bandit y Semgrep, reconociendo que Semgrep puede respetar también un **`.semgrepignore`** en el propio proyecto analizado. Esta ampliación no reemplaza la evaluación sobre el corpus MVP, pero sí prepara el relato del TFG para incorporar **código o repositorios reales** en iteraciones posteriores, con los avisos de licencia, privacidad y datos sensibles ya recogidos en el documento de alcance.
+
+---
+
 ## Referencias cruzadas en el repositorio
 
 Para no duplicar contenido técnico, este capítulo se apoya en documentos ya existentes, entre otros:
