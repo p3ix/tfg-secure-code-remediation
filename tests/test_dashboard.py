@@ -24,7 +24,8 @@ def test_dashboard_renders_html_when_reports_exist() -> None:
     assert response.status_code == 200
     assert "text/html" in response.headers.get("content-type", "")
     assert "Resultado del escaneo" in response.text
-    assert "schema_version" in response.text or "Hallazgos" in response.text
+    assert "Nuevo análisis" in response.text
+    assert "schema_version" in response.text or "Total hallazgos" in response.text
 
 
 def test_dashboard_returns_500_when_reports_missing(monkeypatch) -> None:
@@ -36,3 +37,98 @@ def test_dashboard_returns_500_when_reports_missing(monkeypatch) -> None:
     response = client.get("/dashboard")
 
     assert response.status_code == 500
+
+
+def test_dashboard_analyze_runtime_renders_presentable_result(monkeypatch) -> None:
+    def fake_runtime_analysis() -> dict:
+        return {
+            "analysis_target": "fixtures/mvp",
+            "execution_mode": "runtime",
+            "generated_reports": {
+                "bandit": "reports/runtime/bandit.json",
+                "semgrep": "reports/runtime/semgrep.json",
+            },
+            "findings": [
+                {
+                    "source_tool": "bandit",
+                    "source_rule_id": "B501",
+                    "file_path": "fixtures/mvp/example.py",
+                    "line_start": 12,
+                    "raw_message": "verify false",
+                    "severity": "high",
+                    "mvp_category": "verify_false",
+                    "candidate_for_remediation": True,
+                    "remediation_mode": "autofix_candidate",
+                    "cwe_id": 295,
+                    "owasp_top10": "A04",
+                }
+            ],
+        }
+
+    monkeypatch.setattr("app.main.analyze_fixtures_runtime", fake_runtime_analysis)
+
+    response = client.post(
+        "/dashboard/analyze",
+        data={
+            "analysis_mode": "fixture_runtime",
+            "hide_info": "true",
+            "group_equivalent": "true",
+        },
+    )
+
+    assert response.status_code == 200
+    assert "fixtures/mvp" in response.text
+    assert "verify_false" in response.text
+    assert "Remediación asistida posible" in response.text
+
+
+def test_dashboard_analyze_zip_uses_uploaded_file(monkeypatch) -> None:
+    def fake_analyze_zip(content: bytes) -> dict:
+        assert content == b"zip-content"
+        return {
+            "analysis_target": "upload.zip",
+            "execution_mode": "runtime",
+            "generated_reports": {
+                "bandit": "(temporal)",
+                "semgrep": "(temporal)",
+            },
+            "findings": [
+                {
+                    "source_tool": "semgrep",
+                    "source_rule_id": "yaml.load",
+                    "file_path": "src/app.py",
+                    "line_start": 3,
+                    "raw_message": "unsafe yaml",
+                    "severity": "medium",
+                    "mvp_category": "unsafe_yaml_load",
+                    "candidate_for_remediation": True,
+                    "remediation_mode": "autofix_candidate",
+                }
+            ],
+        }
+
+    monkeypatch.setattr("app.main.analyze_zip_bytes", fake_analyze_zip)
+
+    response = client.post(
+        "/dashboard/analyze",
+        data={"analysis_mode": "upload_zip"},
+        files={"file": ("project.zip", b"zip-content", "application/zip")},
+    )
+
+    assert response.status_code == 200
+    assert "upload.zip" in response.text
+    assert "unsafe_yaml_load" in response.text
+
+
+def test_dashboard_analyze_local_path_error_is_rendered(monkeypatch) -> None:
+    response = client.post(
+        "/dashboard/analyze",
+        data={
+            "analysis_mode": "local_path",
+            "local_path": "demo-project",
+        },
+    )
+
+    assert response.status_code == 200
+    assert "No se pudo completar el análisis" in response.text
+    assert "ruta local" in response.text.lower()

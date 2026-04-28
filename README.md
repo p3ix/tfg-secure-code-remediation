@@ -15,6 +15,7 @@ En **ampliación**: análisis de **proyectos reales** (subida ZIP, ruta local ba
 | [`docs/00_scope.md`](docs/00_scope.md) | Alcance MVP y fases siguientes |
 | [`docs/01_roadmap_and_documentation_ritual.md`](docs/01_roadmap_and_documentation_ritual.md) | Hoja de ruta, ritual issues/docs, cadencia memoria |
 | [`docs/01_architecture_overview.md`](docs/01_architecture_overview.md) | Arquitectura |
+| [`docs/03_experiments/dashboard-web-analysis-console.md`](docs/03_experiments/dashboard-web-analysis-console.md) | Evolución de la interfaz web de análisis |
 | [`docs/06_references/README.md`](docs/06_references/README.md) | Referencias [REF-xxx] |
 
 ## Stack
@@ -50,6 +51,17 @@ uvicorn app.main:app --reload
 - Salud: `GET http://127.0.0.1:8000/health`
 - Dashboard: `GET http://127.0.0.1:8000/dashboard`
 - OpenAPI: `http://127.0.0.1:8000/docs`
+
+### Dashboard web
+
+La vista `/dashboard` actúa como consola ligera del MVP:
+
+- carga informes estáticos del corpus `fixtures/mvp/`;
+- puede relanzar el análisis runtime de fixtures desde la propia web;
+- permite subir un ZIP para analizar un proyecto real;
+- si `TFG_LOCAL_ANALYSIS_ROOT` está configurado, habilita análisis por ruta local relativa.
+
+La interfaz reutiliza el mismo JSON presentable del backend, por lo que sirve tanto para demo como para memoria.
 
 ### Análisis de proyectos reales (nuevo)
 
