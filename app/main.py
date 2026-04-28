@@ -3,6 +3,7 @@ from pathlib import Path
 from fastapi import (
     FastAPI,
     File,
+    Form,
     HTTPException,
     Query,
     Request,
@@ -36,6 +37,48 @@ app = FastAPI(
 )
 
 
+def _build_dashboard_scan(
+    internal_scan: dict,
+    *,
+    hide_info: bool,
+    group_equivalent: bool,
+) -> dict:
+    scan = presentable_from_internal_analysis(
+        internal_scan,
+        group_equivalent=group_equivalent,
+    )
+    return filter_presentable_scan(scan, hide_info=hide_info)
+
+
+def _render_dashboard(
+    request: Request,
+    *,
+    scan: dict | None,
+    hide_info: bool,
+    group_equivalent: bool,
+    analysis_mode: str,
+    analysis_error: str | None = None,
+) -> HTMLResponse:
+    settings = get_settings()
+    return templates.TemplateResponse(
+        request,
+        "dashboard.html",
+        {
+            "request": request,
+            "scan": scan,
+            "hide_info": hide_info,
+            "group_equivalent": group_equivalent,
+            "analysis_mode": analysis_mode,
+            "analysis_error": analysis_error,
+            "local_path_enabled": settings.local_analysis_root is not None,
+            "local_analysis_root": str(settings.local_analysis_root)
+            if settings.local_analysis_root is not None
+            else None,
+            "zip_max_bytes": settings.zip_max_bytes,
+        },
+    )
+
+
 @app.get("/", response_class=RedirectResponse)
 def root(request: Request) -> RedirectResponse:
     query = request.url.query
@@ -55,25 +98,79 @@ def dashboard(
         description="Agrupa hallazgos del mismo fichero/línea/categoría MVP (Bandit+Semgrep).",
     ),
 ) -> HTMLResponse:
-    """Vista HTML del escaneo sobre reports estáticos (misma lógica que /analysis/fixtures/presentable)."""
+    """Dashboard principal: carga por defecto los informes estáticos del corpus MVP."""
     try:
-        scan = presentable_from_internal_analysis(
+        scan = _build_dashboard_scan(
             analyze_fixtures_reports(),
+            hide_info=hide_info,
             group_equivalent=group_equivalent,
         )
-        scan = filter_presentable_scan(scan, hide_info=hide_info)
     except FileNotFoundError as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
-    return templates.TemplateResponse(
+    return _render_dashboard(
         request,
-        "dashboard.html",
-        {
-            "request": request,
-            "scan": scan,
-            "hide_info": hide_info,
-            "group_equivalent": group_equivalent,
-        },
+        scan=scan,
+        hide_info=hide_info,
+        group_equivalent=group_equivalent,
+        analysis_mode="fixture_reports",
     )
+
+
+@app.post("/dashboard/analyze", response_class=HTMLResponse)
+async def dashboard_analyze(
+    request: Request,
+    analysis_mode: str = Form(...),
+    hide_info: bool = Form(False),
+    group_equivalent: bool = Form(False),
+    local_path: str = Form(""),
+    file: UploadFile | None = File(default=None),
+) -> HTMLResponse:
+    """
+    Ejecuta análisis desde la interfaz web y renderiza el resultado en la misma vista.
+    """
+    try:
+        if analysis_mode == "fixture_reports":
+            internal = analyze_fixtures_reports()
+        elif analysis_mode == "fixture_runtime":
+            internal = analyze_fixtures_runtime()
+        elif analysis_mode == "upload_zip":
+            if file is None or not file.filename:
+                raise ValueError("Selecciona un fichero ZIP antes de lanzar el análisis.")
+            internal = analyze_zip_bytes(await file.read())
+        elif analysis_mode == "local_path":
+            settings = get_settings()
+            if settings.local_analysis_root is None:
+                raise PermissionError(
+                    "El análisis por ruta local está desactivado en este entorno."
+                )
+            internal = analyze_local_path_relative(
+                local_path,
+                allowed_root=settings.local_analysis_root,
+            )
+        else:
+            raise ValueError(f"Modo de análisis no soportado: {analysis_mode}")
+
+        scan = _build_dashboard_scan(
+            internal,
+            hide_info=hide_info,
+            group_equivalent=group_equivalent,
+        )
+        return _render_dashboard(
+            request,
+            scan=scan,
+            hide_info=hide_info,
+            group_equivalent=group_equivalent,
+            analysis_mode=analysis_mode,
+        )
+    except (FileNotFoundError, PermissionError, RuntimeError, ValueError) as exc:
+        return _render_dashboard(
+            request,
+            scan=None,
+            hide_info=hide_info,
+            group_equivalent=group_equivalent,
+            analysis_mode=analysis_mode,
+            analysis_error=str(exc),
+        )
 
 @app.get("/health")
 def health():

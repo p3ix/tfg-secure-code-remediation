@@ -3,165 +3,783 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Resultado del escaneo — TFG</title>
+  <title>TFG Secure Code Remediation</title>
   <style>
     :root {
-      --bg: #0f1419;
-      --card: #1a2332;
-      --text: #e7ecf3;
-      --muted: #8b9cb3;
-      --accent: #3d8fd1;
-      --border: #2a3a4d;
-      --sev-high: #e85d6c;
-      --sev-med: #e6a23c;
-      --sev-low: #67c090;
+      --bg: #071018;
+      --bg-alt: #0b1721;
+      --panel: rgba(12, 22, 31, 0.86);
+      --panel-strong: #0f1c27;
+      --ink: #e6f1f7;
+      --muted: #8ba1b2;
+      --line: rgba(117, 151, 173, 0.16);
+      --accent: #23c6a3;
+      --accent-strong: #11967b;
+      --accent-soft: rgba(35, 198, 163, 0.12);
+      --danger: #ff6b81;
+      --danger-soft: rgba(255, 107, 129, 0.12);
+      --warn: #f4b860;
+      --shadow: 0 24px 60px rgba(0, 0, 0, 0.34);
+      --sev-high: #ff7a8f;
+      --sev-medium: #f4b860;
+      --sev-low: #4fd7a8;
+      --radius-xl: 24px;
+      --radius-lg: 18px;
+      --radius-md: 12px;
     }
     * { box-sizing: border-box; }
     body {
       margin: 0;
-      font-family: "Segoe UI", system-ui, sans-serif;
-      background: var(--bg);
-      color: var(--text);
+      font-family: "JetBrains Mono", "Fira Code", "SFMono-Regular", Consolas, monospace;
+      background:
+        linear-gradient(rgba(111, 255, 214, 0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(111, 255, 214, 0.025) 1px, transparent 1px),
+        radial-gradient(circle at top left, rgba(35, 198, 163, 0.14), transparent 24rem),
+        radial-gradient(circle at top right, rgba(77, 124, 255, 0.12), transparent 22rem),
+        linear-gradient(180deg, var(--bg-alt) 0%, var(--bg) 100%);
+      background-size: 26px 26px, 26px 26px, auto, auto, auto;
+      color: var(--ink);
       line-height: 1.5;
-      padding: 1.5rem clamp(1rem, 4vw, 2.5rem);
     }
-    h1 { font-size: 1.35rem; font-weight: 600; margin: 0 0 0.25rem; }
-    .sub { color: var(--muted); font-size: 0.9rem; margin-bottom: 1.5rem; }
-    .grid {
+    .page {
+      width: min(1200px, calc(100vw - 2rem));
+      margin: 0 auto;
+      padding: 1.25rem 0 2rem;
+    }
+    .hero {
       display: grid;
       gap: 1rem;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      margin-bottom: 1.5rem;
+      padding: 1.8rem;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-xl);
+      background:
+        linear-gradient(135deg, rgba(18, 31, 43, 0.96), rgba(10, 19, 28, 0.92)),
+        linear-gradient(135deg, rgba(35, 198, 163, 0.06), transparent 48%);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      position: relative;
     }
-    .card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 1rem 1.1rem;
+    .hero::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(90deg, rgba(111, 255, 214, 0.04) 1px, transparent 1px),
+        linear-gradient(rgba(111, 255, 214, 0.04) 1px, transparent 1px);
+      background-size: 22px 22px;
+      mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.6), transparent 82%);
+      pointer-events: none;
     }
-    .card h2 { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 0 0 0.5rem; }
-    .card .num { font-size: 1.5rem; font-weight: 700; color: var(--accent); }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.85rem;
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 8px;
+    .hero::after {
+      content: "";
+      position: absolute;
+      inset: auto -4rem -5rem auto;
+      width: 18rem;
+      height: 18rem;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(35, 198, 163, 0.18), transparent 68%);
+      pointer-events: none;
+    }
+    .eyebrow {
+      display: inline-flex;
+      width: fit-content;
+      padding: 0.3rem 0.7rem;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent-strong);
+      font-size: 0.78rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      font-weight: 700;
+      border: 1px solid rgba(35, 198, 163, 0.22);
+    }
+    h1, h2, h3, p { margin: 0; }
+    .hero h1 {
+      font-size: clamp(2.2rem, 4.6vw, 4rem);
+      line-height: 1.02;
+      max-width: none;
+      letter-spacing: -0.04em;
+      text-wrap: balance;
+      position: relative;
+      z-index: 1;
+      text-shadow: 0 0 24px rgba(35, 198, 163, 0.14);
+    }
+    .hero-copy {
+      max-width: 72rem;
+      color: var(--muted);
+      font-size: 1rem;
+      position: relative;
+      z-index: 1;
+    }
+    .hero-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      font-size: 0.9rem;
+      color: var(--muted);
+      position: relative;
+      z-index: 1;
+    }
+    .hero-meta span {
+      padding: 0.45rem 0.7rem;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.04);
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
+      gap: 1.25rem;
+      margin-top: 1.25rem;
+      align-items: start;
+    }
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-xl);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+      position: relative;
+    }
+    .side-panel {
+      padding: 1.15rem;
+      position: sticky;
+      top: 1rem;
       overflow: hidden;
     }
-    th, td { padding: 0.6rem 0.75rem; text-align: left; border-bottom: 1px solid var(--border); vertical-align: top; }
-    th { background: #141c28; color: var(--muted); font-weight: 600; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; }
-    tr:last-child td { border-bottom: none; }
-    tbody tr:hover td { background: rgba(61, 143, 209, 0.06); }
-    .sev-high { color: var(--sev-high); font-weight: 600; }
-    .sev-medium { color: var(--sev-med); font-weight: 600; }
-    .sev-low { color: var(--sev-low); font-weight: 600; }
+    .side-panel::after {
+      content: "";
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 3px;
+      background: linear-gradient(180deg, rgba(35, 198, 163, 0.9), rgba(35, 198, 163, 0.08));
+    }
+    .main-panel {
+      padding: 1.15rem;
+      overflow: hidden;
+    }
+    .section-title {
+      font-size: 1.15rem;
+      margin-bottom: 0.25rem;
+    }
+    .section-copy {
+      color: var(--muted);
+      font-size: 0.94rem;
+      margin-bottom: 1rem;
+    }
+    .stack {
+      display: grid;
+      gap: 0.9rem;
+    }
+    .mode-grid {
+      display: grid;
+      gap: 0.75rem;
+    }
+    .mode-option {
+      display: grid;
+      gap: 0.2rem;
+      padding: 0.85rem 0.9rem;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.04);
+      cursor: pointer;
+    }
+    .mode-option.active {
+      border-color: rgba(13, 108, 99, 0.38);
+      background: linear-gradient(135deg, rgba(35, 198, 163, 0.1), rgba(35, 198, 163, 0.03));
+      box-shadow: inset 0 0 0 1px rgba(35, 198, 163, 0.1);
+    }
+    .mode-option.disabled {
+      opacity: 0.58;
+      cursor: not-allowed;
+    }
+    .mode-head {
+      display: flex;
+      gap: 0.7rem;
+      align-items: center;
+    }
+    .mode-head strong {
+      font-size: 0.95rem;
+    }
+    .mode-option small,
+    .field-help,
+    .muted {
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+    .field {
+      display: grid;
+      gap: 0.45rem;
+    }
+    .field label,
+    .options-title {
+      font-size: 0.82rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 700;
+    }
+    .field input[type="text"],
+    .field input[type="file"] {
+      width: 100%;
+      padding: 0.82rem 0.9rem;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--line);
+      background: var(--panel-strong);
+      color: var(--ink);
+      font: inherit;
+    }
+    .option-list {
+      display: grid;
+      gap: 0.55rem;
+    }
+    .toggle {
+      display: flex;
+      gap: 0.65rem;
+      align-items: flex-start;
+      padding: 0.7rem 0.8rem;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.03);
+    }
+    .toggle input {
+      margin-top: 0.22rem;
+      accent-color: var(--accent);
+    }
+    .button {
+      border: none;
+      border-radius: 999px;
+      padding: 0.92rem 1.15rem;
+      background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+      color: #fbfffd;
+      font-size: 0.96rem;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 12px 24px rgba(13, 108, 99, 0.18);
+      position: relative;
+      overflow: hidden;
+    }
+    .button:hover {
+      filter: brightness(0.98);
+    }
+    .button::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.12), transparent);
+      transform: translateX(-100%);
+      animation: button-sheen 3.8s linear infinite;
+    }
+    @keyframes button-sheen {
+      to { transform: translateX(100%); }
+    }
+    .status {
+      margin-bottom: 1rem;
+      padding: 0.9rem 1rem;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.04);
+    }
+    .status strong {
+      display: block;
+      margin-bottom: 0.2rem;
+    }
+    .status.error {
+      border-color: rgba(184, 79, 79, 0.28);
+      background: var(--danger-soft);
+      color: #ffd8df;
+    }
+    .results-head {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 1rem;
+      padding-bottom: 0.9rem;
+      border-bottom: 1px solid var(--line);
+    }
+    .results-head p {
+      color: var(--muted);
+      max-width: 40rem;
+    }
+    .pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.55rem;
+    }
+    .pill {
+      padding: 0.45rem 0.7rem;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.04);
+      font-size: 0.88rem;
+      color: var(--muted);
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 0.8rem;
+      margin-bottom: 1rem;
+    }
+    .stat-card {
+      padding: 0.95rem;
+      border-radius: var(--radius-lg);
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--line);
+    }
+    .stat-card h3 {
+      font-size: 0.76rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin-bottom: 0.35rem;
+    }
+    .stat-card .num {
+      font-size: 1.8rem;
+      line-height: 1;
+      color: var(--accent-strong);
+    }
+    .split-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 0.8rem;
+      margin-bottom: 1rem;
+    }
+    .list-card {
+      padding: 0.95rem;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.03);
+    }
+    .list-card h3 {
+      margin-bottom: 0.7rem;
+      font-size: 0.94rem;
+    }
+    .mini-list {
+      display: grid;
+      gap: 0.4rem;
+      font-size: 0.9rem;
+    }
+    .mini-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      color: var(--muted);
+    }
+    .mini-row strong {
+      color: var(--ink);
+      font-weight: 600;
+    }
+    .findings {
+      display: grid;
+      gap: 1rem;
+      margin-top: 1.1rem;
+    }
+    .finding {
+      padding: 1.05rem;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--line);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02));
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.02),
+        0 16px 30px rgba(0, 0, 0, 0.16);
+      position: relative;
+      overflow: hidden;
+      transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+    }
+    .finding::before {
+      content: "";
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 4px;
+      background: linear-gradient(180deg, rgba(35, 198, 163, 0.95), rgba(17, 150, 123, 0.15));
+    }
+    .finding::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at top right, rgba(35, 198, 163, 0.08), transparent 36%);
+      pointer-events: none;
+    }
+    .finding:hover {
+      transform: translateY(-1px);
+      border-color: rgba(35, 198, 163, 0.24);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.03),
+        0 20px 36px rgba(0, 0, 0, 0.22);
+    }
+    .finding-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      align-items: flex-start;
+      margin-bottom: 0.65rem;
+      position: relative;
+      z-index: 1;
+    }
+    .finding-top h3 {
+      font-size: 1.07rem;
+      margin-bottom: 0.18rem;
+      color: #f4fbff;
+    }
+    .finding-top p {
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+    .badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      justify-content: flex-end;
+      align-items: center;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.38rem 0.62rem;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(4px);
+    }
+    .sev-high { color: var(--sev-high); border-color: rgba(184, 79, 79, 0.28); }
+    .sev-medium { color: var(--sev-medium); border-color: rgba(186, 123, 31, 0.28); }
+    .sev-low { color: var(--sev-low); border-color: rgba(44, 125, 90, 0.28); }
     .sev-unknown { color: var(--muted); }
-    a { color: var(--accent); }
-    .msg { font-size: 0.78rem; color: var(--muted); word-break: break-word; max-width: 36rem; }
-    footer { margin-top: 2rem; font-size: 0.8rem; color: var(--muted); }
-    code { font-size: 0.78rem; background: #141c28; padding: 0.1rem 0.35rem; border-radius: 4px; }
+    .severity-ring {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      box-shadow: 0 0 16px currentColor;
+    }
+    .finding-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 0.7rem;
+      margin-bottom: 0.8rem;
+      position: relative;
+      z-index: 1;
+    }
+    .meta-box {
+      padding: 0.75rem 0.8rem;
+      border-radius: var(--radius-md);
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--line);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02);
+    }
+    .meta-box .label {
+      display: block;
+      margin-bottom: 0.2rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      font-size: 0.73rem;
+      color: var(--muted);
+    }
+    code {
+      padding: 0.1rem 0.35rem;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.06);
+      font-size: 0.88em;
+    }
+    .source-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      margin-top: 0.45rem;
+      font-size: 0.84rem;
+      color: var(--muted);
+      position: relative;
+      z-index: 1;
+    }
+    .source-item {
+      padding: 0.28rem 0.52rem;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.04);
+    }
+    .finding-message {
+      color: var(--muted);
+      font-size: 0.94rem;
+      margin-bottom: 0.7rem;
+      word-break: break-word;
+      position: relative;
+      z-index: 1;
+      max-width: 70ch;
+    }
+    .empty {
+      padding: 2rem 1rem;
+      border-radius: var(--radius-lg);
+      border: 1px dashed var(--line);
+      text-align: center;
+      background: rgba(255, 255, 255, 0.03);
+    }
+    .empty p {
+      color: var(--muted);
+      margin-top: 0.4rem;
+    }
+    a {
+      color: var(--accent);
+    }
+    @media (max-width: 900px) {
+      .page {
+        width: min(1200px, calc(100vw - 1rem));
+      }
+      .layout {
+        grid-template-columns: 1fr;
+      }
+      .side-panel {
+        position: static;
+      }
+      .hero h1 {
+        font-size: clamp(1.9rem, 8vw, 3rem);
+        line-height: 1.06;
+      }
+      .finding-top {
+        flex-direction: column;
+      }
+      .badges {
+        justify-content: flex-start;
+      }
+    }
   </style>
 </head>
 <body>
-  <h1>Resultado del escaneo (vista MVP)</h1>
-  <p class="sub">
-    Objetivo: <code>{{ scan.meta.analysis_target }}</code>
-    · Modo: <code>{{ scan.meta.execution_mode }}</code>
-    · Generado: {{ scan.meta.generated_at }}
-    {% if scan.meta.group_equivalent %}· <strong>Vista agrupada</strong> (mismo fichero/línea/categoría){% endif %}
-  </p>
+  <div class="page">
+    <section class="hero">
+      <span class="eyebrow">MVP Web Console</span>
+      <div>
+        <h1>Analiza código Python y enseña el resultado con cara de producto.</h1>
+      </div>
+      <p class="hero-copy">
+        Esta vista unifica los informes del corpus, la ejecución runtime sobre fixtures y el análisis de proyectos reales subidos como ZIP.
+        La capa de IA para remediación queda desacoplada: aquí el foco es presentar bien el flujo detect - classify - remediate - verify.
+      </p>
+      <div class="hero-meta">
+        <span>Dashboard HTML sobre FastAPI + Jinja</span>
+        <span>Entrada web para ZIP, fixtures y ruta local</span>
+        <span>Filtros demo sin salir del navegador</span>
+      </div>
+    </section>
 
-  <div class="grid">
-    <div class="card">
-      <h2>Total hallazgos</h2>
-      <div class="num">{{ scan.summary.total_findings }}</div>
-    </div>
-    {% for sev, n in scan.summary.by_severity.items() %}
-    <div class="card">
-      <h2>Severidad {{ sev }}</h2>
-      <div class="num">{{ n }}</div>
-    </div>
-    {% endfor %}
-  </div>
+    <div class="layout">
+      <aside class="panel side-panel">
+        <h2 class="section-title">Nuevo análisis</h2>
+        <p class="section-copy">
+          Lanza un escaneo desde la web y renderiza el resultado en esta misma página.
+        </p>
 
-  <div class="grid" style="margin-bottom:1.5rem;">
-    {% for cat, n in scan.summary.by_mvp_category.items() %}
-    <div class="card">
-      <h2>{{ cat }}</h2>
-      <div class="num">{{ n }}</div>
-    </div>
-    {% endfor %}
-  </div>
+        <form class="stack" method="post" action="/dashboard/analyze" enctype="multipart/form-data">
+          <div class="mode-grid">
+            <label class="mode-option{% if analysis_mode == 'fixture_reports' %} active{% endif %}">
+              <div class="mode-head">
+                <input type="radio" name="analysis_mode" value="fixture_reports" {% if analysis_mode == 'fixture_reports' %}checked{% endif %} />
+                <strong>Informes guardados</strong>
+              </div>
+              <small>Carga los reports estáticos del corpus MVP para demo inmediata.</small>
+            </label>
 
-  <h2 style="font-size:1rem;margin-bottom:0.75rem;">Hallazgos</h2>
-  <table>
-    <thead>
-      <tr>
-        <th>#</th>
-        <th>Título / detalle</th>
-        <th>Severidad</th>
-        <th>Categoría</th>
-        <th>Fichero</th>
-        <th>Herramienta</th>
-        <th>Remediación</th>
-        <th>Estándares</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for row in scan.findings %}
-      <tr>
-        <td>{{ row.id }}</td>
-        <td>
-          <strong>{{ row.title }}</strong>
-          <p class="msg">{{ row.message }}</p>
-        </td>
-        <td class="sev-{{ row.severity }}">{{ row.severity_label }}</td>
-        <td><code>{{ row.category }}</code></td>
-        <td><small>{{ row.file }}:{{ row.line_start }}</small></td>
-        <td>
-          {% if row.sources is defined and row.sources|length > 1 %}
-            {% for s in row.sources %}
-              {{ s.tool }}<br/><small>{{ s.rule_id }}</small>{% if not loop.last %}<br/>{% endif %}
-            {% endfor %}
-          {% else %}
-            {{ row.tool }}<br/><small>{{ row.rule_id }}</small>
+            <label class="mode-option{% if analysis_mode == 'fixture_runtime' %} active{% endif %}">
+              <div class="mode-head">
+                <input type="radio" name="analysis_mode" value="fixture_runtime" {% if analysis_mode == 'fixture_runtime' %}checked{% endif %} />
+                <strong>Ejecutar fixtures</strong>
+              </div>
+              <small>Relanza Bandit y Semgrep sobre <code>fixtures/mvp</code> desde la UI.</small>
+            </label>
+
+            <label class="mode-option{% if analysis_mode == 'upload_zip' %} active{% endif %}">
+              <div class="mode-head">
+                <input type="radio" name="analysis_mode" value="upload_zip" {% if analysis_mode == 'upload_zip' %}checked{% endif %} />
+                <strong>Subir ZIP</strong>
+              </div>
+              <small>Analiza un proyecto real comprimido. Límite actual: {{ zip_max_bytes }} bytes.</small>
+            </label>
+
+            <label class="mode-option{% if analysis_mode == 'local_path' %} active{% endif %}{% if not local_path_enabled %} disabled{% endif %}">
+              <div class="mode-head">
+                <input type="radio" name="analysis_mode" value="local_path" {% if analysis_mode == 'local_path' %}checked{% endif %} {% if not local_path_enabled %}disabled{% endif %} />
+                <strong>Ruta local permitida</strong>
+              </div>
+              <small>
+                {% if local_path_enabled %}
+                Disponible bajo <code>{{ local_analysis_root }}</code>.
+                {% else %}
+                Desactivado hasta configurar <code>TFG_LOCAL_ANALYSIS_ROOT</code>.
+                {% endif %}
+              </small>
+            </label>
+          </div>
+
+          <div class="field">
+            <label for="file">Archivo ZIP</label>
+            <input id="file" type="file" name="file" accept=".zip,application/zip" />
+            <div class="field-help">Solo se usa cuando seleccionas "Subir ZIP".</div>
+          </div>
+
+          <div class="field">
+            <label for="local_path">Ruta relativa</label>
+            <input id="local_path" type="text" name="local_path" placeholder="mi-proyecto" />
+            <div class="field-help">Solo se usa para análisis bajo la raíz local configurada.</div>
+          </div>
+
+          <div class="field">
+            <div class="options-title">Vista presentable</div>
+            <div class="option-list">
+              <label class="toggle">
+                <input type="checkbox" name="hide_info" value="true" {% if hide_info %}checked{% endif %} />
+                <span>
+                  <strong>Vista demo</strong><br />
+                  <span class="muted">Oculta hallazgos solo detección o severidad baja.</span>
+                </span>
+              </label>
+              <label class="toggle">
+                <input type="checkbox" name="group_equivalent" value="true" {% if group_equivalent %}checked{% endif %} />
+                <span>
+                  <strong>Agrupar equivalentes</strong><br />
+                  <span class="muted">Fusiona filas con mismo fichero, línea y categoría MVP.</span>
+                </span>
+              </label>
+            </div>
+          </div>
+
+          <button class="button" type="submit">Lanzar análisis</button>
+        </form>
+      </aside>
+
+      <main class="panel main-panel">
+        {% if analysis_error %}
+        <div class="status error">
+          <strong>No se pudo completar el análisis</strong>
+          {{ analysis_error }}
+        </div>
+        {% endif %}
+
+        {% if scan %}
+        <div class="results-head">
+          <div>
+            <h2 class="section-title">Resultado del escaneo</h2>
+            <p>
+              La vista muestra el payload presentable sin JSON crudo de herramienta, pensado para demo, memoria y revisión visual rápida.
+            </p>
+          </div>
+          <div class="pill-row">
+            <span class="pill">Objetivo: <code>{{ scan.meta.analysis_target }}</code></span>
+            <span class="pill">Modo: <code>{{ scan.meta.execution_mode }}</code></span>
+            <span class="pill">Generado: {{ scan.meta.generated_at }}</span>
+          </div>
+        </div>
+
+        <div class="stats-grid">
+          <article class="stat-card">
+            <h3>Total hallazgos</h3>
+            <div class="num">{{ scan.summary.total_findings }}</div>
+          </article>
+          {% for sev, n in scan.summary.by_severity.items() %}
+          <article class="stat-card">
+            <h3>Severidad {{ sev }}</h3>
+            <div class="num">{{ n }}</div>
+          </article>
+          {% endfor %}
+        </div>
+
+        <div class="split-grid">
+          <section class="list-card">
+            <h3>Categorias MVP</h3>
+            <div class="mini-list">
+              {% for cat, n in scan.summary.by_mvp_category.items() %}
+              <div class="mini-row"><span><code>{{ cat }}</code></span><strong>{{ n }}</strong></div>
+              {% endfor %}
+            </div>
+          </section>
+
+          <section class="list-card">
+            <h3>Modos de remediación</h3>
+            <div class="mini-list">
+              {% for mode, n in scan.summary.by_remediation_mode.items() %}
+              <div class="mini-row"><span><code>{{ mode }}</code></span><strong>{{ n }}</strong></div>
+              {% endfor %}
+            </div>
+          </section>
+        </div>
+
+        <section class="findings">
+          {% for row in scan.findings %}
+          <article class="finding">
+            <div class="finding-top">
+              <div>
+                <h3>#{{ row.id }} · {{ row.title }}</h3>
+                <p>{{ row.file }}:{{ row.line_start }}</p>
+              </div>
+              <div class="badges">
+                <span class="badge sev-{{ row.severity }}"><span class="severity-ring"></span>&nbsp;{{ row.severity_label }}</span>
+                <span class="badge"><code>{{ row.category }}</code></span>
+                <span class="badge">{{ row.remediation.mode_label }}</span>
+                {% if row.group_size is defined %}
+                <span class="badge">{{ row.group_size }} fuentes</span>
+                {% endif %}
+              </div>
+            </div>
+
+            <p class="finding-message">{{ row.message }}</p>
+
+            <div class="finding-grid">
+              <div class="meta-box">
+                <span class="label">Herramienta</span>
+                {% if row.sources is defined and row.sources|length > 1 %}
+                Varias fuentes
+                {% else %}
+                {{ row.tool }}<br /><small>{{ row.rule_id }}</small>
+                {% endif %}
+              </div>
+              <div class="meta-box">
+                <span class="label">CWE / OWASP</span>
+                {% if row.standards.cwe_id %}
+                CWE-{{ row.standards.cwe_id }}
+                {% else %}
+                —
+                {% endif %}
+                {% if row.standards.owasp_top10 %}<br /><small>{{ row.standards.owasp_top10 }}</small>{% endif %}
+              </div>
+              <div class="meta-box">
+                <span class="label">Referencia</span>
+                {% if row.reference_url %}
+                <a href="{{ row.reference_url }}" target="_blank" rel="noopener">Abrir enlace</a>
+                {% else %}
+                —
+                {% endif %}
+              </div>
+            </div>
+
+            {% if row.sources is defined and row.sources|length > 1 %}
+            <div class="source-list">
+              {% for s in row.sources %}
+              <span class="source-item">{{ s.tool }} · {{ s.rule_id }}</span>
+              {% endfor %}
+            </div>
+            {% endif %}
+          </article>
+          {% endfor %}
+        </section>
+
+        <div class="status">
+          <strong>Notas de presentación</strong>
+          {{ scan.meta.note }}
+          {% if scan.meta.presentable_filter_note %}<br />{{ scan.meta.presentable_filter_note }}{% endif %}
+          {% if scan.meta.group_equivalent_note %}<br />{{ scan.meta.group_equivalent_note }}{% endif %}
+          {% if scan.meta.reports %}
+          <br />Informes: Bandit {{ scan.meta.reports.bandit }}, Semgrep {{ scan.meta.reports.semgrep }}
           {% endif %}
-        </td>
-        <td><small>{{ row.remediation.mode_label }}</small></td>
-        <td>
-          {% if row.standards.cwe_id %}
-            CWE-{{ row.standards.cwe_id }}
-            {% if row.standards.cwe_url %}<br/><a href="{{ row.standards.cwe_url }}" target="_blank" rel="noopener">CWE</a>{% endif %}
-          {% else %}—{% endif %}
-          {% if row.standards.owasp_top10 %}<br/><small>{{ row.standards.owasp_top10 }}</small>{% endif %}
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-
-  <footer>
-    <p class="sub">
-      {% if group_equivalent %}
-      <a href="/dashboard{% if hide_info %}?hide_info=true{% endif %}">Sin agrupar equivalentes</a>
-      {% else %}
-      <a href="/dashboard?group_equivalent=true{% if hide_info %}&hide_info=true{% endif %}">Agrupar equivalentes</a>
-      {% endif %}
-      ·
-      {% if hide_info %}
-      <a href="/dashboard{% if group_equivalent %}?group_equivalent=true{% endif %}">Listado completo (sin filtro demo)</a>
-      · <strong>Vista filtrada.</strong> {{ scan.meta.presentable_filter_note }}
-      {% else %}
-      <a href="/dashboard?hide_info=true{% if group_equivalent %}&group_equivalent=true{% endif %}">Vista demo</a> (oculta solo detección y severidad baja)
-      {% endif %}
-    </p>
-    {{ scan.meta.note }}
-    · <code>schema_version {{ scan.schema_version }}</code>
-    {% if scan.meta.reports %}
-    · Informes: Bandit {{ scan.meta.reports.bandit }}, Semgrep {{ scan.meta.reports.semgrep }}
-    {% endif %}
-  </footer>
+          <br /><code>schema_version {{ scan.schema_version }}</code>
+        </div>
+        {% else %}
+        <div class="empty">
+          <h2 class="section-title">Sin resultados todavía</h2>
+          <p>Selecciona un modo de análisis a la izquierda y lanza el flujo desde navegador.</p>
+        </div>
+        {% endif %}
+      </main>
+    </div>
+  </div>
 </body>
 </html>
