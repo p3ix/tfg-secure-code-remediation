@@ -289,6 +289,11 @@
       background: var(--danger-soft);
       color: #ffd8df;
     }
+    .status.notice {
+      border-color: rgba(13, 108, 99, 0.25);
+      background: var(--accent-soft);
+      color: var(--ink);
+    }
     .results-head {
       display: flex;
       flex-wrap: wrap;
@@ -648,6 +653,13 @@
       </aside>
 
       <main class="panel main-panel">
+        {% if analysis_notice %}
+        <div class="status notice">
+          <strong>Estado inicial</strong>
+          {{ analysis_notice }}
+        </div>
+        {% endif %}
+
         {% if analysis_error %}
         <div class="status error">
           <strong>No se pudo completar el análisis</strong>

@@ -49,6 +49,7 @@ uvicorn app.main:app --reload
 ```
 
 - Salud: `GET http://127.0.0.1:8000/health`
+- Inicio: `GET http://127.0.0.1:8000/` (redirección 302 a `/dashboard`)
 - Dashboard: `GET http://127.0.0.1:8000/dashboard`
 - OpenAPI: `http://127.0.0.1:8000/docs`
 
@@ -62,6 +63,7 @@ La vista `/dashboard` actúa como consola ligera del MVP:
 - si `TFG_LOCAL_ANALYSIS_ROOT` está configurado, habilita análisis por ruta local relativa.
 
 La interfaz reutiliza el mismo JSON presentable del backend, por lo que sirve tanto para demo como para memoria.
+El modo `git clone` permanece como endpoint API (`POST /analysis/git-clone`) y no está integrado como opción directa del formulario web en esta iteración.
 
 ### Análisis de proyectos reales (nuevo)
 

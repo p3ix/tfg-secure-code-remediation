@@ -58,6 +58,7 @@ def _render_dashboard(
     group_equivalent: bool,
     analysis_mode: str,
     analysis_error: str | None = None,
+    analysis_notice: str | None = None,
 ) -> HTMLResponse:
     settings = get_settings()
     return templates.TemplateResponse(
@@ -70,6 +71,7 @@ def _render_dashboard(
             "group_equivalent": group_equivalent,
             "analysis_mode": analysis_mode,
             "analysis_error": analysis_error,
+            "analysis_notice": analysis_notice,
             "local_path_enabled": settings.local_analysis_root is not None,
             "local_analysis_root": str(settings.local_analysis_root)
             if settings.local_analysis_root is not None
@@ -99,6 +101,8 @@ def dashboard(
     ),
 ) -> HTMLResponse:
     """Dashboard principal: carga por defecto los informes estáticos del corpus MVP."""
+    scan: dict | None = None
+    notice: str | None = None
     try:
         scan = _build_dashboard_scan(
             analyze_fixtures_reports(),
@@ -106,13 +110,18 @@ def dashboard(
             group_equivalent=group_equivalent,
         )
     except FileNotFoundError as exc:
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+        notice = (
+            "No se encontraron informes estáticos del corpus MVP. "
+            "Puedes relanzar análisis con 'Ejecutar fixtures' o usar 'Subir ZIP'. "
+            f"Detalle técnico: {exc}"
+        )
     return _render_dashboard(
         request,
         scan=scan,
         hide_info=hide_info,
         group_equivalent=group_equivalent,
         analysis_mode="fixture_reports",
+        analysis_notice=notice,
     )
 
 
