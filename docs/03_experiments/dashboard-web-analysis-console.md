@@ -24,6 +24,21 @@ La iteración incorpora:
 3. **Filtros de presentación** (`hide_info`, `group_equivalent`) desde la propia interfaz.
 4. **Mensajes de error visibles** en HTML cuando falla el análisis.
 
+### Superficie HTTP de la consola web
+
+| Ruta | Método | Uso |
+|------|--------|-----|
+| `/` | `GET` | Redirección a `/dashboard` preservando query string. |
+| `/dashboard` | `GET` | Render inicial (intenta cargar reports estáticos MVP; si faltan, muestra aviso y mantiene la UI operativa). |
+| `/dashboard/analyze` | `POST` | Ejecuta análisis según `analysis_mode` y renderiza resultado/errores en la misma página. |
+
+Valores soportados de `analysis_mode` en formulario:
+
+- `fixture_reports`
+- `fixture_runtime`
+- `upload_zip`
+- `local_path` (solo si `TFG_LOCAL_ANALYSIS_ROOT` está configurado)
+
 ## Decisiones de diseño
 
 - Se mantiene la **API existente**; la interfaz web es una capa adicional, no un reemplazo de endpoints.
@@ -52,5 +67,6 @@ Esto mejora la defensa oral porque el proyecto deja de depender de explicar endp
 ## Límites
 
 - No hay persistencia de análisis entre peticiones.
-- No se ha incorporado aún una vista web para clonado Git, por mantener esta iteración centrada en ZIP, fixtures y ruta local.
+- No se ha incorporado aún una vista web para clonado Git, por mantener esta iteración centrada en ZIP, fixtures y ruta local (`POST /analysis/git-clone` sigue en API).
 - La capa IA para remediación sigue fuera de esta iteración; la consola web prepara mejor ese encaje futuro, pero no depende de él.
+- La consola web presenta resultados y filtros de análisis; la ejecución del pipeline completo de verificación autofix sigue en endpoint dedicado (`GET /analysis/pipeline/mvp-autofix-verification`).

@@ -28,7 +28,7 @@ def test_dashboard_renders_html_when_reports_exist() -> None:
     assert "schema_version" in response.text or "Total hallazgos" in response.text
 
 
-def test_dashboard_returns_500_when_reports_missing(monkeypatch) -> None:
+def test_dashboard_renders_notice_when_reports_missing(monkeypatch) -> None:
     def fake_analyze() -> dict:
         raise FileNotFoundError("no report")
 
@@ -36,7 +36,9 @@ def test_dashboard_returns_500_when_reports_missing(monkeypatch) -> None:
 
     response = client.get("/dashboard")
 
-    assert response.status_code == 500
+    assert response.status_code == 200
+    assert "No se encontraron informes estáticos del corpus MVP" in response.text
+    assert "Estado inicial" in response.text
 
 
 def test_dashboard_analyze_runtime_renders_presentable_result(monkeypatch) -> None:
