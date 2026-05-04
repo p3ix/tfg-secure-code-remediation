@@ -86,7 +86,14 @@ export PATH="$PWD/.venv/bin:$PATH"
 pytest -q
 ```
 
-En CI (Ubuntu) las dependencias se instalan como en [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
+La suite usa cobertura sobre `app/` con reporte `term-missing` y umbral minimo del **60%** (configurado en `pyproject.toml` mediante `pytest-cov`).
+
+```bash
+export PATH="$PWD/.venv/bin:$PATH"
+pytest --cov=app --cov-report=term-missing --cov-fail-under=60
+```
+
+En CI (Ubuntu) las dependencias se instalan como en [`.github/workflows/ci.yml`](.github/workflows/ci.yml) y se aplica el mismo gate de cobertura.
 
 ## Licencia
 
