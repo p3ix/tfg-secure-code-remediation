@@ -116,6 +116,7 @@ Para no duplicar contenido técnico, este capítulo se apoya en documentos ya ex
 - Clasificación: [`docs/01_findings_classification_mapping.md`](../01_findings_classification_mapping.md)
 - Tabla de evaluación MVP: [`docs/04_delivery/mvp-evaluation-table.md`](../04_delivery/mvp-evaluation-table.md)
 - Ruido y duplicados: [`docs/04_delivery/scan-noise-and-duplicates.md`](../04_delivery/scan-noise-and-duplicates.md)
+- Índice maestro de trazabilidad: [`docs/04_delivery/issue-traceability-index.md`](../04_delivery/issue-traceability-index.md)
 - Consola web del dashboard: [`docs/03_experiments/dashboard-web-analysis-console.md`](../03_experiments/dashboard-web-analysis-console.md)
 - Remediaciones: carpeta [`docs/05_remediations/`](../05_remediations/)
 
