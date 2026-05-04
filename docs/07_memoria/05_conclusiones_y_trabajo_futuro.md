@@ -32,7 +32,7 @@ Documentar decisiones en `docs/`, enlazar trabajo con **issues** y mantener CI a
 
 ## 3. Trabajo futuro
 
-El repositorio ha empezado a materializar parte de la ampliación (análisis vía ZIP y Git, ritual de documentación por fases, roadmap de IA en ADR-002); el hilo narrativo está en el [capítulo 06](06_roadmap_fases_y_cadencia_memoria.md) y en [`docs/01_roadmap_and_documentation_ritual.md`](../01_roadmap_and_documentation_ritual.md). **Las líneas siguientes** siguen siendo válidas como continuación plausible, ordenadas de forma aproximada por impacto y esfuerzo.
+El repositorio ya materializa parte de la ampliación (análisis vía ZIP y Git, ritual de documentación por fases, roadmap de IA en ADR-002); el hilo narrativo está en el [capítulo 06](06_roadmap_fases_y_cadencia_memoria.md) y en [`docs/01_roadmap_and_documentation_ritual.md`](../01_roadmap_and_documentation_ritual.md). En esta etapa mantengo una separación explícita entre flujos de consola web (`/dashboard`) y flujos solo API (`/analysis/git-clone`, `/analysis/pipeline/mvp-autofix-verification`) para no mezclar alcance de UX con capacidad backend. **Las líneas siguientes** siguen siendo válidas como continuación plausible, ordenadas de forma aproximada por impacto y esfuerzo.
 
 1. **Ampliar el corpus** con proyectos reales anonimizados o fragmentos más grandes, midiendo falsos positivos/negativos de forma sistemática (evaluación cuantitativa).
 2. **Deduplicación y priorización** más fina entre hallazgos de Bandit y Semgrep, sin perder trazabilidad de la regla origen.

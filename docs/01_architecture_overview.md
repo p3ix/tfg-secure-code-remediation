@@ -1,4 +1,4 @@
-# Arquitectura inicial del sistema
+# Arquitectura del sistema (MVP y ampliaciones)
 
 ## 1. Propósito de la arquitectura
 
@@ -43,7 +43,7 @@ De forma simplificada, el flujo será el siguiente:
 
 ### 4.1. API backend
 
-El núcleo de la aplicación será un backend desarrollado con **FastAPI**. He elegido esta tecnología por su sencillez, buena integración con Python, facilidad para construir APIs y adecuación al alcance del proyecto.
+El núcleo de la aplicación es un backend desarrollado con **FastAPI**. He elegido esta tecnología por su sencillez, buena integración con Python, facilidad para construir APIs y adecuación al alcance del proyecto.
 
 Este componente será responsable de:
 
@@ -51,16 +51,19 @@ Este componente será responsable de:
 - recibir peticiones de análisis;
 - coordinar el flujo interno del sistema;
 - devolver resultados estructurados al usuario.
+- renderizar una consola web ligera (`/dashboard`) sobre la misma lógica presentable de la API.
 
 ### 4.2. Módulo de entrada del proyecto
 
-Este módulo se encargará de gestionar el proyecto Python que se desea analizar. En el MVP el objetivo es trabajar con proyectos o ejemplos controlados, evitando inicialmente funcionalidades más complejas como integración directa con repositorios remotos o automatización avanzada sobre GitHub.
+Este módulo se encarga de gestionar el proyecto Python que se desea analizar. En el MVP se parte de ejemplos controlados (`fixtures/mvp`), y en la ampliación ya implementada se incorporan tres entradas para proyectos reales con controles de seguridad: ZIP (`POST /analysis/upload-zip`), ruta local bajo raíz permitida (`POST /analysis/local-path`) y clonado Git HTTPS acotado (`POST /analysis/git-clone`).
 
 Sus funciones principales serán:
 
 - recibir la ruta o contenido a analizar;
 - preparar el proyecto para su inspección;
 - garantizar que el análisis se ejecuta sobre el material esperado.
+
+La interfaz web (`/dashboard`) cubre `fixture_reports`, `fixture_runtime`, `upload_zip` y `local_path` (si hay raíz local configurada). El flujo de `git-clone` y el pipeline completo de verificación MVP se mantienen como endpoints API en esta iteración.
 
 ### 4.3. Módulo de análisis estático
 
@@ -138,7 +141,7 @@ En el MVP, la prioridad será que esta salida sea clara y útil, más que diseñ
 
 ## 5. Flujo principal del sistema
 
-El flujo general previsto puede resumirse así:
+El flujo general implementado puede resumirse así:
 
 1. el usuario selecciona o proporciona un proyecto Python;
 2. el backend inicia el análisis;
@@ -150,7 +153,7 @@ El flujo general previsto puede resumirse así:
 8. se genera una respuesta final para el usuario;
 9. el usuario decide si acepta o no la remediación propuesta.
 
-## 6. Diagrama inicial de componentes
+## 6. Diagrama de componentes
 
 A nivel conceptual, la arquitectura inicial puede representarse así:
 

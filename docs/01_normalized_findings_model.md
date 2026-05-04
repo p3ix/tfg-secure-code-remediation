@@ -244,6 +244,6 @@ Además, al separar campos obligatorios y opcionales, el modelo resulta suficien
 
 ## 12. Conclusión
 
-El modelo normalizado de hallazgos constituye una pieza central de la arquitectura del TFG. Gracias a este diseño, el sistema podrá dejar de depender directamente del formato de salida de Bandit o Semgrep y pasar a trabajar con una estructura propia, coherente con el enfoque detect–repair–verify.
+El modelo normalizado de hallazgos constituye una pieza central de la arquitectura del TFG. Gracias a este diseño, el sistema deja de depender directamente del formato de salida de Bandit o Semgrep y trabaja con una estructura propia, coherente con el enfoque detect–repair–verify.
 
-A partir de este documento, el siguiente paso razonable será implementar la transformación de resultados de Bandit y Semgrep hacia este modelo común y empezar a enriquecerlo con clasificación basada en CWE, OWASP y reglas del MVP.
+La transformación de resultados de Bandit y Semgrep hacia este modelo común ya está implementada en el repositorio, junto con su enriquecimiento de clasificación (CWE/OWASP/ASVS) y su uso en salidas internas y presentables.
