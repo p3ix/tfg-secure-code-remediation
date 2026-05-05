@@ -716,6 +716,12 @@
         </div>
 
         <section class="findings">
+          {% if scan.findings|length == 0 %}
+          <div class="empty">
+            <h3 class="section-title">Sin hallazgos en esta ejecución</h3>
+            <p>El análisis terminó correctamente, pero no devolvió findings visibles con los filtros actuales.</p>
+          </div>
+          {% endif %}
           {% for row in scan.findings %}
           <article class="finding">
             <div class="finding-top">
@@ -779,6 +785,9 @@
           {{ scan.meta.note }}
           {% if scan.meta.presentable_filter_note %}<br />{{ scan.meta.presentable_filter_note }}{% endif %}
           {% if scan.meta.group_equivalent_note %}<br />{{ scan.meta.group_equivalent_note }}{% endif %}
+          {% if scan.meta.invalid_findings_skipped %}
+          <br />Se ignoraron {{ scan.meta.invalid_findings_skipped }} hallazgos inválidos por contrato incompleto.
+          {% endif %}
           {% if scan.meta.reports %}
           <br />Informes: Bandit {{ scan.meta.reports.bandit }}, Semgrep {{ scan.meta.reports.semgrep }}
           {% endif %}

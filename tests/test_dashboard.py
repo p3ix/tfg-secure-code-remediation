@@ -122,6 +122,54 @@ def test_dashboard_analyze_zip_uses_uploaded_file(monkeypatch) -> None:
     assert "unsafe_yaml_load" in response.text
 
 
+def test_dashboard_analyze_zip_rejects_non_zip_file() -> None:
+    response = client.post(
+        "/dashboard/analyze",
+        data={"analysis_mode": "upload_zip"},
+        files={"file": ("project.txt", b"txt-content", "text/plain")},
+    )
+    assert response.status_code == 200
+    assert "No se pudo completar el análisis" in response.text
+    assert "terminar en .zip" in response.text
+
+
+def test_dashboard_analyze_local_path_requires_value(monkeypatch, tmp_path) -> None:
+    from app.config import get_settings
+
+    monkeypatch.setenv("TFG_LOCAL_ANALYSIS_ROOT", str(tmp_path))
+    get_settings.cache_clear()
+    try:
+        response = client.post(
+            "/dashboard/analyze",
+            data={
+                "analysis_mode": "local_path",
+                "local_path": "   ",
+            },
+        )
+        assert response.status_code == 200
+        assert "Indica una ruta relativa" in response.text
+    finally:
+        get_settings.cache_clear()
+
+
+def test_dashboard_renders_empty_findings_state(monkeypatch) -> None:
+    def fake_runtime_analysis() -> dict:
+        return {
+            "analysis_target": "fixtures/mvp",
+            "execution_mode": "runtime",
+            "generated_reports": {"bandit": "x", "semgrep": "y"},
+            "findings": [],
+        }
+
+    monkeypatch.setattr("app.main.analyze_fixtures_runtime", fake_runtime_analysis)
+    response = client.post(
+        "/dashboard/analyze",
+        data={"analysis_mode": "fixture_runtime"},
+    )
+    assert response.status_code == 200
+    assert "Sin hallazgos en esta ejecución" in response.text
+
+
 def test_dashboard_analyze_local_path_error_is_rendered(monkeypatch) -> None:
     response = client.post(
         "/dashboard/analyze",
