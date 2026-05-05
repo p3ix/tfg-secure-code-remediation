@@ -118,16 +118,22 @@ def build_presentable_scan(
     """
     from collections import Counter
 
+    def _safe_label(value: Any, default: str) -> str:
+        text = str(value).strip() if value is not None else ""
+        return text or default
+
     if group_equivalent:
         groups = group_findings_by_equivalence(findings)
-        by_sev = Counter(max_severity(g) for g in groups)
-        by_cat = Counter(primary_finding(g).mvp_category for g in groups)
-        by_mode = Counter(primary_finding(g).remediation_mode for g in groups)
+        by_sev = Counter(_safe_label(max_severity(g), "unknown") for g in groups)
+        by_cat = Counter(_safe_label(primary_finding(g).mvp_category, "unknown") for g in groups)
+        by_mode = Counter(
+            _safe_label(primary_finding(g).remediation_mode, "detection_only") for g in groups
+        )
         rows = [_group_to_presentable_row(i + 1, g) for i, g in enumerate(groups)]
     else:
-        by_sev = Counter(f.severity for f in findings)
-        by_cat = Counter(f.mvp_category for f in findings)
-        by_mode = Counter(f.remediation_mode for f in findings)
+        by_sev = Counter(_safe_label(f.severity, "unknown") for f in findings)
+        by_cat = Counter(_safe_label(f.mvp_category, "unknown") for f in findings)
+        by_mode = Counter(_safe_label(f.remediation_mode, "detection_only") for f in findings)
         rows = [
             _finding_to_presentable_row(i + 1, f)
             for i, f in enumerate(findings)
@@ -176,7 +182,14 @@ def presentable_from_internal_analysis(
     (con claves findings como listas de dict) en presentable.
     """
     findings_dicts = internal.get("findings") or []
-    findings = [_dict_to_normalized(d) for d in findings_dicts]
+    findings: list[NormalizedFinding] = []
+    invalid_findings = 0
+    for d in findings_dicts:
+        normalized = _dict_to_normalized(d)
+        if normalized is None:
+            invalid_findings += 1
+            continue
+        findings.append(normalized)
     reports = None
     if "bandit_report" in internal:
         reports = {
@@ -190,13 +203,18 @@ def presentable_from_internal_analysis(
     if "bandit_report" in internal and execution_mode != "runtime":
         execution_mode = "static_reports"
 
-    return build_presentable_scan(
+    out = build_presentable_scan(
         findings,
         analysis_target=str(internal.get("analysis_target", "")),
         execution_mode=execution_mode,
         reports=reports,
         group_equivalent=group_equivalent,
     )
+    if invalid_findings:
+        out_meta = dict(out.get("meta") or {})
+        out_meta["invalid_findings_skipped"] = invalid_findings
+        out["meta"] = out_meta
+    return out
 
 
 def filter_presentable_scan(scan: dict[str, Any], *, hide_info: bool) -> dict[str, Any]:
@@ -220,9 +238,9 @@ def filter_presentable_scan(scan: dict[str, Any], *, hide_info: bool) -> dict[st
             or f.get("severity") == "low"
         )
     ]
-    by_sev = Counter(f.get("severity") for f in filtered)
-    by_cat = Counter(f.get("category") for f in filtered)
-    by_mode = Counter(f.get("remediation", {}).get("mode") for f in filtered)
+    by_sev = Counter((f.get("severity") or "unknown") for f in filtered)
+    by_cat = Counter((f.get("category") or "unknown") for f in filtered)
+    by_mode = Counter((f.get("remediation", {}).get("mode") or "detection_only") for f in filtered)
     renumbered = [{**row, "id": i + 1} for i, row in enumerate(filtered)]
 
     meta = dict(scan.get("meta") or {})
@@ -245,6 +263,30 @@ def filter_presentable_scan(scan: dict[str, Any], *, hide_info: bool) -> dict[st
     }
 
 
-def _dict_to_normalized(d: dict[str, Any]) -> NormalizedFinding:
+def _dict_to_normalized(d: dict[str, Any]) -> NormalizedFinding | None:
     """Reconstruye NormalizedFinding desde asdict (respuesta interna)."""
-    return NormalizedFinding(**{k: v for k, v in d.items() if k in NormalizedFinding.__dataclass_fields__})
+    if not isinstance(d, dict):
+        return None
+    fields = NormalizedFinding.__dataclass_fields__
+    payload = {k: v for k, v in d.items() if k in fields}
+    required_defaults: dict[str, Any] = {
+        "source_tool": "unknown",
+        "source_rule_id": "unknown",
+        "file_path": "unknown",
+        "line_start": 0,
+        "raw_message": "",
+        "severity": "unknown",
+        "mvp_category": "unknown",
+        "candidate_for_remediation": False,
+        "remediation_mode": "detection_only",
+    }
+    for key, default in required_defaults.items():
+        payload[key] = payload.get(key, default)
+    try:
+        payload["line_start"] = int(payload["line_start"])
+    except (TypeError, ValueError):
+        payload["line_start"] = 0
+    try:
+        return NormalizedFinding(**payload)
+    except TypeError:
+        return None
