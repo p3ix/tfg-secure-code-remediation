@@ -16,6 +16,7 @@ from starlette.templating import Jinja2Templates
 from app.config import get_settings
 from app.services.analysis_service import analyze_fixtures_reports
 from app.services.project_scan_service import (
+    PayloadTooLargeError,
     analyze_local_path_relative,
     analyze_zip_bytes,
     clone_and_analyze_repo,
@@ -145,13 +146,20 @@ async def dashboard_analyze(
         elif analysis_mode == "upload_zip":
             if file is None or not file.filename:
                 raise ValueError("Selecciona un fichero ZIP antes de lanzar el análisis.")
-            internal = analyze_zip_bytes(await file.read())
+            if not file.filename.lower().endswith(".zip"):
+                raise ValueError("El fichero seleccionado debe terminar en .zip")
+            content = await file.read()
+            if not content:
+                raise ValueError("El fichero ZIP está vacío")
+            internal = analyze_zip_bytes(content)
         elif analysis_mode == "local_path":
             settings = get_settings()
             if settings.local_analysis_root is None:
                 raise PermissionError(
                     "El análisis por ruta local está desactivado en este entorno."
                 )
+            if not local_path.strip():
+                raise ValueError("Indica una ruta relativa para el modo local_path")
             internal = analyze_local_path_relative(
                 local_path,
                 allowed_root=settings.local_analysis_root,
@@ -171,7 +179,7 @@ async def dashboard_analyze(
             group_equivalent=group_equivalent,
             analysis_mode=analysis_mode,
         )
-    except (FileNotFoundError, PermissionError, RuntimeError, ValueError) as exc:
+    except (FileNotFoundError, PermissionError, RuntimeError, ValueError, PayloadTooLargeError) as exc:
         return _render_dashboard(
             request,
             scan=None,
@@ -211,8 +219,20 @@ async def analysis_upload_zip(
     Límite de tamaño: variable de entorno `TFG_ZIP_MAX_BYTES` (por defecto ~20 MB).
     """
     content = await file.read()
+    if not content:
+        raise HTTPException(
+            status_code=400,
+            detail="No se recibió contenido ZIP en el fichero subido.",
+        )
+    if file.filename and not file.filename.lower().endswith(".zip"):
+        raise HTTPException(
+            status_code=400,
+            detail="El fichero debe tener extensión .zip",
+        )
     try:
         return analyze_zip_bytes(content)
+    except PayloadTooLargeError as exc:
+        raise HTTPException(status_code=413, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except RuntimeError as exc:
