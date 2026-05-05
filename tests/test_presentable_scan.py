@@ -130,6 +130,30 @@ def test_presentable_from_internal_analysis_roundtrip() -> None:
     assert out["findings"][0]["category"] == "command_injection"
 
 
+def test_presentable_from_internal_skips_invalid_findings() -> None:
+    internal = {
+        "analysis_target": "fixtures/mvp",
+        "execution_mode": "runtime",
+        "findings": [
+            {
+                "source_tool": "bandit",
+                "source_rule_id": "B602",
+                "file_path": "a.py",
+                "line_start": 2,
+                "raw_message": "shell",
+                "severity": "high",
+                "mvp_category": "command_injection",
+                "candidate_for_remediation": True,
+                "remediation_mode": "autofix_candidate",
+            },
+            "invalid-row",
+        ],
+    }
+    out = presentable_from_internal_analysis(internal)
+    assert out["summary"]["total_findings"] == 1
+    assert out["meta"]["invalid_findings_skipped"] == 1
+
+
 def test_presentable_fixtures_endpoint_if_reports_exist() -> None:
     bandit = Path("reports/bandit/fixtures-mvp-bandit.json")
     semgrep = Path("reports/semgrep/fixtures-mvp-semgrep.json")
