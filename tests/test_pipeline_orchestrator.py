@@ -1,5 +1,10 @@
 from app.models.finding import NormalizedFinding
-from app.services.pipeline_orchestrator import build_pipeline_view
+from pathlib import Path
+
+from app.services.pipeline_orchestrator import (
+    build_pipeline_view,
+    run_mvp_autofix_verification_roundtrip,
+)
 
 
 def test_build_pipeline_view_counts_and_groups() -> None:
@@ -49,3 +54,44 @@ def test_build_pipeline_view_counts_and_groups() -> None:
     assert view["counts_by_remediation_mode"]["autofix_candidate"] == 2
     assert len(view["findings_by_mvp_category"]["sql_injection"]) == 1
     assert len(view["findings_by_mvp_category"]["command_injection"]) == 2
+
+
+def test_run_mvp_autofix_verification_roundtrip_partial_errors(
+    monkeypatch, tmp_path
+) -> None:
+    ok_fixture = tmp_path / "ok.py"
+    ok_fixture.write_text("print('x')", encoding="utf-8")
+    missing_fixture = tmp_path / "missing.py"
+
+    monkeypatch.setattr(
+        "app.services.pipeline_orchestrator.MVP_AUTOFIX_FIXTURES",
+        {"unsafe_yaml_load": [ok_fixture, missing_fixture]},
+    )
+    monkeypatch.setattr(
+        "app.services.pipeline_orchestrator._load_verifier_map",
+        lambda: {"unsafe_yaml_load": lambda source: {"ok": bool(source)}},
+    )
+
+    out = run_mvp_autofix_verification_roundtrip()
+    summary = out["summary"]
+    assert summary["categories_total"] == 1
+    assert summary["categories_with_errors"] == 1
+    assert summary["fixtures_total"] == 2
+    assert summary["fixtures_verified"] == 1
+    assert summary["fixtures_with_errors"] == 1
+    assert out["categories"]["unsafe_yaml_load"][1]["error"] == "fixture no encontrado"
+
+
+def test_run_mvp_autofix_verification_roundtrip_missing_verifier(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "app.services.pipeline_orchestrator.MVP_AUTOFIX_FIXTURES",
+        {"verify_false": [Path("fixtures/mvp/https_verify_false/vuln_requests_verify_false.py")]},
+    )
+    monkeypatch.setattr(
+        "app.services.pipeline_orchestrator._load_verifier_map",
+        lambda: {},
+    )
+
+    out = run_mvp_autofix_verification_roundtrip()
+    err = out["categories"]["verify_false"][0]["error"]
+    assert "verificador no registrado" in err
