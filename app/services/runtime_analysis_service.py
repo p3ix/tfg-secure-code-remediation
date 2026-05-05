@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import subprocess
+import sys
 from dataclasses import asdict
 from pathlib import Path
+from shutil import which
 from typing import Any
 
 from app.services.findings_loader import load_all_findings
@@ -15,12 +17,21 @@ BANDIT_RUNTIME_REPORT = RUNTIME_REPORTS_DIR / "fixtures-mvp-bandit-runtime.json"
 SEMGREP_RUNTIME_REPORT = RUNTIME_REPORTS_DIR / "fixtures-mvp-semgrep-runtime.json"
 
 
+def _resolve_tool_command(binary_name: str, module_name: str) -> list[str]:
+    """
+    Prefiere binario en PATH; si no está, usa `python -m <module>`.
+    """
+    if which(binary_name):
+        return [binary_name]
+    return [sys.executable, "-m", module_name]
+
+
 def build_bandit_command(target_path: str | Path, output_path: str | Path) -> list[str]:
     from app.config import get_settings
 
     merged = ",".join(get_settings().analysis_exclude_patterns)
     cmd = [
-        "bandit",
+        *_resolve_tool_command("bandit", "bandit"),
         "-c",
         "pyproject.toml",
         "-r",
@@ -47,7 +58,7 @@ def _semgrep_exclude_cli_args() -> list[str]:
 
 def build_semgrep_command(target_path: str | Path, output_path: str | Path) -> list[str]:
     cmd = [
-        "semgrep",
+        *_resolve_tool_command("semgrep", "semgrep"),
         "scan",
         "--config",
         "p/default",
@@ -79,6 +90,13 @@ def run_command(
     )
 
 
+def _preview_output(text: str, limit: int = 600) -> str:
+    cleaned = (text or "").strip()
+    if len(cleaned) <= limit:
+        return cleaned
+    return cleaned[:limit] + "...(truncado)"
+
+
 def run_analysis_command(command: list[str]) -> subprocess.CompletedProcess[str]:
     """
     Ejecuta Bandit o Semgrep con el límite de tiempo global (`TFG_ANALYSIS_TIMEOUT_SEC`).
@@ -89,6 +107,11 @@ def run_analysis_command(command: list[str]) -> subprocess.CompletedProcess[str]
     timeout_sec = None if limit <= 0 else float(limit)
     try:
         return run_command(command, timeout_sec=timeout_sec)
+    except FileNotFoundError as exc:
+        tool = command[0] if command else "herramienta"
+        raise RuntimeError(
+            f"No se pudo ejecutar {tool}: comando no encontrado en PATH"
+        ) from exc
     except subprocess.TimeoutExpired as exc:
         tool = command[0] if command else "herramienta"
         raise RuntimeError(
@@ -136,10 +159,12 @@ def analyze_fixtures_runtime() -> dict[str, Any]:
             "bandit": {
                 "returncode": bandit_result.returncode,
                 "command": bandit_cmd,
+                "stderr_preview": _preview_output(bandit_result.stderr),
             },
             "semgrep": {
                 "returncode": semgrep_result.returncode,
                 "command": semgrep_cmd,
+                "stderr_preview": _preview_output(semgrep_result.stderr),
             },
         },
         "total_findings": len(enriched_findings),

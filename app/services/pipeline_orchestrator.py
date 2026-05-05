@@ -76,12 +76,22 @@ def run_mvp_autofix_verification_roundtrip() -> dict[str, Any]:
     results: dict[str, Any] = {
         "pipeline_step": "mvp_autofix_verify",
         "categories": {},
+        "summary": {
+            "categories_total": len(MVP_AUTOFIX_FIXTURES),
+            "categories_ok": 0,
+            "categories_with_errors": 0,
+            "fixtures_total": 0,
+            "fixtures_verified": 0,
+            "fixtures_with_errors": 0,
+        },
     }
 
     for category, paths in sorted(MVP_AUTOFIX_FIXTURES.items()):
-        verify_fn = verifiers[category]
+        verify_fn = verifiers.get(category)
+        category_has_errors = False
         per_file: list[dict[str, Any]] = []
         for rel_path in paths:
+            results["summary"]["fixtures_total"] += 1
             if not rel_path.exists():
                 per_file.append(
                     {
@@ -89,14 +99,41 @@ def run_mvp_autofix_verification_roundtrip() -> dict[str, Any]:
                         "error": "fixture no encontrado",
                     }
                 )
+                category_has_errors = True
+                results["summary"]["fixtures_with_errors"] += 1
                 continue
-            source = rel_path.read_text(encoding="utf-8")
-            per_file.append(
-                {
-                    "fixture": str(rel_path),
-                    "verification": verify_fn(source),
-                }
-            )
+            if verify_fn is None:
+                per_file.append(
+                    {
+                        "fixture": str(rel_path),
+                        "error": "verificador no registrado para la categoría",
+                    }
+                )
+                category_has_errors = True
+                results["summary"]["fixtures_with_errors"] += 1
+                continue
+            try:
+                source = rel_path.read_text(encoding="utf-8")
+                per_file.append(
+                    {
+                        "fixture": str(rel_path),
+                        "verification": verify_fn(source),
+                    }
+                )
+                results["summary"]["fixtures_verified"] += 1
+            except (OSError, ValueError, RuntimeError) as exc:
+                per_file.append(
+                    {
+                        "fixture": str(rel_path),
+                        "error": str(exc),
+                    }
+                )
+                category_has_errors = True
+                results["summary"]["fixtures_with_errors"] += 1
         results["categories"][category] = per_file
+        if category_has_errors:
+            results["summary"]["categories_with_errors"] += 1
+        else:
+            results["summary"]["categories_ok"] += 1
 
     return results

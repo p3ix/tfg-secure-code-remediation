@@ -27,3 +27,16 @@ def test_mvp_autofix_verification_endpoint_ok(monkeypatch) -> None:
     body = response.json()
     assert body["pipeline_step"] == "mvp_autofix_verify"
     assert "unsafe_yaml_load" in body["categories"]
+
+
+def test_mvp_autofix_verification_endpoint_oserror(monkeypatch) -> None:
+    def fake_roundtrip() -> dict:
+        raise OSError("fallo de lectura")
+
+    monkeypatch.setattr(
+        "app.main.run_mvp_autofix_verification_roundtrip",
+        fake_roundtrip,
+    )
+    response = client.get("/analysis/pipeline/mvp-autofix-verification")
+    assert response.status_code == 500
+    assert "fallo de lectura" in response.json()["detail"]

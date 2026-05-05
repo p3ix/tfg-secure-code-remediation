@@ -16,7 +16,7 @@ def test_build_bandit_command() -> None:
         "reports/runtime/fixtures-mvp-bandit-runtime.json",
     )
 
-    assert command[0] == "bandit"
+    assert "bandit" in " ".join(command[:3])
     assert "-r" in command
     assert "fixtures/mvp" in command
     assert "-o" in command
@@ -31,7 +31,7 @@ def test_build_semgrep_command() -> None:
         "reports/runtime/fixtures-mvp-semgrep-runtime.json",
     )
 
-    assert command[0] == "semgrep"
+    assert "semgrep" in " ".join(command[:3])
     assert "scan" in command
     assert "--config" in command
     assert "p/default" in command
@@ -61,3 +61,8 @@ def test_run_analysis_command_raises_on_timeout(monkeypatch: pytest.MonkeyPatch)
             )
     finally:
         get_settings.cache_clear()
+
+
+def test_run_analysis_command_raises_when_tool_missing() -> None:
+    with pytest.raises(RuntimeError, match="comando no encontrado"):
+        run_analysis_command(["definitely-missing-tool-xyz"])

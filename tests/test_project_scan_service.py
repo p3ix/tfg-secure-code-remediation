@@ -9,7 +9,9 @@ from fastapi.testclient import TestClient
 from app.config import get_settings
 from app.main import app
 from app.services.project_scan_service import (
+    PayloadTooLargeError,
     _validate_https_git_url,
+    extract_zip_safely,
     resolve_allowed_analysis_path,
 )
 
@@ -32,7 +34,31 @@ def test_validate_https_git_url_rejects_http() -> None:
 def test_validate_https_git_url_rejects_wrong_host() -> None:
     with pytest.raises(ValueError, match="Host no permitido"):
         _validate_https_git_url(
-            "https://evil.example.com/repo.git",
+            "https://evil.example.com/acme/repo.git",
+            frozenset({"github.com"}),
+        )
+
+
+def test_validate_https_git_url_rejects_credentials() -> None:
+    with pytest.raises(ValueError, match="credenciales"):
+        _validate_https_git_url(
+            "https://user:pass@github.com/octocat/repo.git",
+            frozenset({"github.com"}),
+        )
+
+
+def test_validate_https_git_url_rejects_query() -> None:
+    with pytest.raises(ValueError, match="query params"):
+        _validate_https_git_url(
+            "https://github.com/octocat/repo.git?ref=main",
+            frozenset({"github.com"}),
+        )
+
+
+def test_validate_https_git_url_rejects_short_path() -> None:
+    with pytest.raises(ValueError, match="owner/repo"):
+        _validate_https_git_url(
+            "https://github.com/repo-only",
             frozenset({"github.com"}),
         )
 
@@ -46,6 +72,25 @@ def test_zip_path_traversal_rejected() -> None:
 
     with pytest.raises(ValueError, match="sospechosa|path"):
         analyze_zip_bytes(buf.getvalue())
+
+
+def test_extract_zip_safely_rejects_invalid_zip(tmp_path) -> None:
+    with pytest.raises(ValueError, match="ZIP válido"):
+        extract_zip_safely(b"not-a-zip", tmp_path, max_uncompressed_bytes=1024)
+
+
+def test_extract_zip_safely_rejects_too_many_entries(tmp_path) -> None:
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("a.txt", b"x")
+        zf.writestr("b.txt", b"y")
+    with pytest.raises(ValueError, match="demasiadas entradas"):
+        extract_zip_safely(
+            buf.getvalue(),
+            tmp_path,
+            max_uncompressed_bytes=1024,
+            max_entries=1,
+        )
 
 
 def test_ai_status_endpoint() -> None:
@@ -75,6 +120,20 @@ def test_resolve_allowed_analysis_path_rejects_dotdot(tmp_path) -> None:
 def test_resolve_allowed_analysis_path_rejects_absolute(tmp_path) -> None:
     with pytest.raises(ValueError, match="absolutas"):
         resolve_allowed_analysis_path("/etc", tmp_path)
+
+
+def test_resolve_allowed_analysis_path_rejects_dot(tmp_path) -> None:
+    with pytest.raises(ValueError, match="subdirectorio"):
+        resolve_allowed_analysis_path(".", tmp_path)
+
+
+def test_resolve_allowed_analysis_path_rejects_symlink_escape(tmp_path) -> None:
+    outside = tmp_path.parent / "outside-target"
+    outside.mkdir(exist_ok=True)
+    link = tmp_path / "link"
+    link.symlink_to(outside, target_is_directory=True)
+    with pytest.raises(ValueError, match="directorio raíz permitido"):
+        resolve_allowed_analysis_path("link", tmp_path)
 
 
 def test_local_path_forbidden_without_env(monkeypatch) -> None:
@@ -136,6 +195,40 @@ def test_analysis_upload_zip_runtime_error(monkeypatch) -> None:
 
     assert r.status_code == 502
     assert "bandit no disponible" in r.json()["detail"]
+
+
+def test_analysis_upload_zip_empty_content() -> None:
+    client = TestClient(app)
+    r = client.post(
+        "/analysis/upload-zip",
+        files={"file": ("project.zip", b"", "application/zip")},
+    )
+    assert r.status_code == 400
+    assert "No se recibió contenido ZIP" in r.json()["detail"]
+
+
+def test_analysis_upload_zip_rejects_non_zip_extension() -> None:
+    client = TestClient(app)
+    r = client.post(
+        "/analysis/upload-zip",
+        files={"file": ("project.txt", b"abc", "text/plain")},
+    )
+    assert r.status_code == 400
+    assert "extensión .zip" in r.json()["detail"]
+
+
+def test_analysis_upload_zip_payload_too_large(monkeypatch) -> None:
+    def fake_analyze_zip(_: bytes) -> dict:
+        raise PayloadTooLargeError("ZIP demasiado grande")
+
+    monkeypatch.setattr("app.main.analyze_zip_bytes", fake_analyze_zip)
+    client = TestClient(app)
+    r = client.post(
+        "/analysis/upload-zip",
+        files={"file": ("big.zip", b"x", "application/zip")},
+    )
+    assert r.status_code == 413
+    assert "ZIP demasiado grande" in r.json()["detail"]
 
 
 def test_analysis_git_clone_success(monkeypatch) -> None:
