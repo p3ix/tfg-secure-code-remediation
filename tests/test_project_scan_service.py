@@ -1,7 +1,9 @@
 """Tests de límites y validación del escaneo de proyectos reales (ZIP / Git)."""
 
 import io
+import subprocess
 import zipfile
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -11,6 +13,9 @@ from app.main import app
 from app.services.project_scan_service import (
     PayloadTooLargeError,
     _validate_https_git_url,
+    analyze_directory,
+    analyze_local_path_relative,
+    clone_and_analyze_repo,
     extract_zip_safely,
     resolve_allowed_analysis_path,
 )
@@ -93,6 +98,106 @@ def test_extract_zip_safely_rejects_too_many_entries(tmp_path) -> None:
         )
 
 
+def test_analyze_directory_rejects_non_directory(tmp_path) -> None:
+    file_path = tmp_path / "not_dir.txt"
+    file_path.write_text("x", encoding="utf-8")
+    with pytest.raises(FileNotFoundError, match="No es un directorio"):
+        analyze_directory(file_path, analysis_target_label="local:test")
+
+
+def test_analyze_directory_fails_when_bandit_report_missing(monkeypatch, tmp_path) -> None:
+    target = tmp_path / "target"
+    target.mkdir()
+
+    class _FixedTmpDir:
+        def __init__(self, path: Path):
+            self.path = path
+
+        def __enter__(self):
+            self.path.mkdir(parents=True, exist_ok=True)
+            return str(self.path)
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+    temp_root = tmp_path / "temp-work"
+
+    monkeypatch.setattr(
+        "app.services.project_scan_service.tempfile.TemporaryDirectory",
+        lambda prefix="": _FixedTmpDir(temp_root),
+    )
+
+    def fake_bandit_command(_root, output):
+        return ["bandit", "-o", str(output)]
+
+    def fake_semgrep_command(_root, output):
+        return ["semgrep", "--json-output", str(output), str(_root)]
+
+    def fake_run(_cmd):
+        return subprocess.CompletedProcess(args=_cmd, returncode=0, stdout="", stderr="")
+
+    monkeypatch.setattr(
+        "app.services.project_scan_service.build_bandit_command",
+        fake_bandit_command,
+    )
+    monkeypatch.setattr(
+        "app.services.project_scan_service.build_semgrep_command",
+        fake_semgrep_command,
+    )
+    monkeypatch.setattr("app.services.project_scan_service.run_analysis_command", fake_run)
+
+    with pytest.raises(RuntimeError, match="Bandit no generó informe"):
+        analyze_directory(target, analysis_target_label="local:test")
+
+
+def test_analyze_directory_fails_when_semgrep_report_missing(monkeypatch, tmp_path) -> None:
+    target = tmp_path / "target"
+    target.mkdir()
+
+    class _FixedTmpDir:
+        def __init__(self, path: Path):
+            self.path = path
+
+        def __enter__(self):
+            self.path.mkdir(parents=True, exist_ok=True)
+            return str(self.path)
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+    temp_root = tmp_path / "temp-work"
+
+    monkeypatch.setattr(
+        "app.services.project_scan_service.tempfile.TemporaryDirectory",
+        lambda prefix="": _FixedTmpDir(temp_root),
+    )
+
+    def fake_bandit_command(_root, output):
+        return ["bandit", "-o", str(output)]
+
+    def fake_semgrep_command(_root, output):
+        return ["semgrep", "--json-output", str(output), str(_root)]
+
+    def fake_run(cmd):
+        if "bandit" in cmd[0]:
+            out_idx = cmd.index("-o")
+            Path(cmd[out_idx + 1]).write_text("{}", encoding="utf-8")
+        return subprocess.CompletedProcess(args=cmd, returncode=0, stdout="", stderr="")
+
+    monkeypatch.setattr(
+        "app.services.project_scan_service.build_bandit_command",
+        fake_bandit_command,
+    )
+    monkeypatch.setattr(
+        "app.services.project_scan_service.build_semgrep_command",
+        fake_semgrep_command,
+    )
+    monkeypatch.setattr("app.services.project_scan_service.run_analysis_command", fake_run)
+
+    with pytest.raises(RuntimeError, match="Semgrep no generó informe"):
+        analyze_directory(target, analysis_target_label="local:test")
+
+
 def test_ai_status_endpoint() -> None:
     client = TestClient(app)
     r = client.get("/ai/status")
@@ -127,6 +232,11 @@ def test_resolve_allowed_analysis_path_rejects_dot(tmp_path) -> None:
         resolve_allowed_analysis_path(".", tmp_path)
 
 
+def test_resolve_allowed_analysis_path_rejects_whitespace(tmp_path) -> None:
+    with pytest.raises(ValueError, match="inválida"):
+        resolve_allowed_analysis_path(" proj ", tmp_path)
+
+
 def test_resolve_allowed_analysis_path_rejects_symlink_escape(tmp_path) -> None:
     outside = tmp_path.parent / "outside-target"
     outside.mkdir(exist_ok=True)
@@ -134,6 +244,11 @@ def test_resolve_allowed_analysis_path_rejects_symlink_escape(tmp_path) -> None:
     link.symlink_to(outside, target_is_directory=True)
     with pytest.raises(ValueError, match="directorio raíz permitido"):
         resolve_allowed_analysis_path("link", tmp_path)
+
+
+def test_analyze_local_path_relative_missing_dir(tmp_path) -> None:
+    with pytest.raises(FileNotFoundError, match="No es un directorio o no existe"):
+        analyze_local_path_relative("missing", allowed_root=tmp_path)
 
 
 def test_local_path_forbidden_without_env(monkeypatch) -> None:
@@ -285,6 +400,109 @@ def test_analysis_git_clone_runtime_error(monkeypatch) -> None:
 
     assert r.status_code == 502
     assert "git clone fallo" in r.json()["detail"]
+
+
+def test_clone_and_analyze_repo_service_success(monkeypatch, tmp_path) -> None:
+    monkeypatch.setenv("TFG_ENABLE_GIT_CLONE", "1")
+    monkeypatch.setenv("TFG_GIT_ALLOWED_HOSTS", "github.com")
+    get_settings.cache_clear()
+    try:
+        def fake_run(cmd, capture_output, text, timeout, check):
+            clone_dir = Path(cmd[-1])
+            clone_dir.mkdir(parents=True, exist_ok=True)
+            return subprocess.CompletedProcess(
+                args=cmd,
+                returncode=0,
+                stdout="ok",
+                stderr="",
+            )
+
+        def fake_analyze_directory(target: Path, *, analysis_target_label: str) -> dict:
+            assert target.is_dir()
+            return {"analysis_target": analysis_target_label, "findings": [], "total_findings": 0}
+
+        monkeypatch.setattr("app.services.project_scan_service.subprocess.run", fake_run)
+        monkeypatch.setattr(
+            "app.services.project_scan_service.analyze_directory",
+            fake_analyze_directory,
+        )
+
+        out = clone_and_analyze_repo("https://github.com/octocat/Hello-World.git")
+        assert out["analysis_target"].startswith("git:https://")
+        assert out["meta"]["git_returncode"] == 0
+        assert out["meta"]["git_command"][0] == "git"
+    finally:
+        get_settings.cache_clear()
+
+
+def test_clone_and_analyze_repo_service_timeout(monkeypatch) -> None:
+    monkeypatch.setenv("TFG_ENABLE_GIT_CLONE", "1")
+    monkeypatch.setenv("TFG_GIT_ALLOWED_HOSTS", "github.com")
+    get_settings.cache_clear()
+    try:
+        def fake_run(*args, **kwargs):
+            raise subprocess.TimeoutExpired(cmd=["git", "clone"], timeout=5)
+
+        monkeypatch.setattr("app.services.project_scan_service.subprocess.run", fake_run)
+        with pytest.raises(RuntimeError, match="tiempo límite"):
+            clone_and_analyze_repo("https://github.com/octocat/Hello-World.git")
+    finally:
+        get_settings.cache_clear()
+
+
+def test_clone_and_analyze_repo_service_git_missing(monkeypatch) -> None:
+    monkeypatch.setenv("TFG_ENABLE_GIT_CLONE", "1")
+    monkeypatch.setenv("TFG_GIT_ALLOWED_HOSTS", "github.com")
+    get_settings.cache_clear()
+    try:
+        def fake_run(*args, **kwargs):
+            raise FileNotFoundError("git")
+
+        monkeypatch.setattr("app.services.project_scan_service.subprocess.run", fake_run)
+        with pytest.raises(RuntimeError, match="comando 'git' no disponible"):
+            clone_and_analyze_repo("https://github.com/octocat/Hello-World.git")
+    finally:
+        get_settings.cache_clear()
+
+
+def test_clone_and_analyze_repo_service_nonzero_return(monkeypatch) -> None:
+    monkeypatch.setenv("TFG_ENABLE_GIT_CLONE", "1")
+    monkeypatch.setenv("TFG_GIT_ALLOWED_HOSTS", "github.com")
+    get_settings.cache_clear()
+    try:
+        def fake_run(cmd, capture_output, text, timeout, check):
+            return subprocess.CompletedProcess(
+                args=cmd,
+                returncode=128,
+                stdout="",
+                stderr="fatal: repo not found",
+            )
+
+        monkeypatch.setattr("app.services.project_scan_service.subprocess.run", fake_run)
+        with pytest.raises(RuntimeError, match="git clone falló"):
+            clone_and_analyze_repo("https://github.com/octocat/missing.git")
+    finally:
+        get_settings.cache_clear()
+
+
+def test_clone_and_analyze_repo_service_incomplete_clone(monkeypatch) -> None:
+    monkeypatch.setenv("TFG_ENABLE_GIT_CLONE", "1")
+    monkeypatch.setenv("TFG_GIT_ALLOWED_HOSTS", "github.com")
+    get_settings.cache_clear()
+    try:
+        def fake_run(cmd, capture_output, text, timeout, check):
+            return subprocess.CompletedProcess(
+                args=cmd,
+                returncode=0,
+                stdout="ok",
+                stderr="",
+            )
+
+        monkeypatch.setattr("app.services.project_scan_service.subprocess.run", fake_run)
+        with pytest.raises(RuntimeError, match="Clonado incompleto"):
+            clone_and_analyze_repo("https://github.com/octocat/Hello-World.git")
+    finally:
+        get_settings.cache_clear()
 
 
 def test_local_path_with_root_success(monkeypatch, tmp_path) -> None:
