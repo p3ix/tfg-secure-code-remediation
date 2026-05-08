@@ -251,6 +251,10 @@ def clone_and_analyze_repo(url: str) -> dict[str, Any]:
                 timeout=settings.git_clone_timeout_sec,
                 check=False,
             )
+        except FileNotFoundError as exc:
+            raise RuntimeError(
+                "No se pudo ejecutar git clone: comando 'git' no disponible en PATH"
+            ) from exc
         except subprocess.TimeoutExpired as exc:
             raise RuntimeError(
                 "git clone superó el tiempo límite "
@@ -267,5 +271,8 @@ def clone_and_analyze_repo(url: str) -> dict[str, Any]:
         out["meta"] = {
             "clone_url": url,
             "git_returncode": proc.returncode,
+            "git_command": cmd,
+            "git_stdout_preview": _preview_output(proc.stdout),
+            "git_stderr_preview": _preview_output(proc.stderr),
         }
         return out
