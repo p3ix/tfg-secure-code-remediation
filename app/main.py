@@ -38,6 +38,18 @@ app = FastAPI(
 )
 
 
+_ALLOWED_ZIP_CONTENT_TYPES = {
+    "application/zip",
+    "application/x-zip-compressed",
+    "application/octet-stream",
+}
+
+
+def _looks_like_zip(content: bytes) -> bool:
+    # ZIP signatures: local file header / empty archive / spanned archive
+    return content.startswith((b"PK\x03\x04", b"PK\x05\x06", b"PK\x07\x08"))
+
+
 def _build_dashboard_scan(
     internal_scan: dict,
     *,
@@ -148,9 +160,16 @@ async def dashboard_analyze(
                 raise ValueError("Selecciona un fichero ZIP antes de lanzar el análisis.")
             if not file.filename.lower().endswith(".zip"):
                 raise ValueError("El fichero seleccionado debe terminar en .zip")
+            if file.content_type and file.content_type not in _ALLOWED_ZIP_CONTENT_TYPES:
+                raise ValueError(
+                    "Tipo de contenido no permitido para ZIP. "
+                    f"Recibido: {file.content_type}"
+                )
             content = await file.read()
             if not content:
                 raise ValueError("El fichero ZIP está vacío")
+            if not _looks_like_zip(content):
+                raise ValueError("El contenido subido no tiene firma ZIP válida")
             internal = analyze_zip_bytes(content)
         elif analysis_mode == "local_path":
             settings = get_settings()
@@ -228,6 +247,19 @@ async def analysis_upload_zip(
         raise HTTPException(
             status_code=400,
             detail="El fichero debe tener extensión .zip",
+        )
+    if file.content_type and file.content_type not in _ALLOWED_ZIP_CONTENT_TYPES:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Tipo de contenido no permitido para ZIP. "
+                f"Recibido: {file.content_type}"
+            ),
+        )
+    if not _looks_like_zip(content):
+        raise HTTPException(
+            status_code=400,
+            detail="El contenido subido no tiene firma ZIP válida",
         )
     try:
         return analyze_zip_bytes(content)

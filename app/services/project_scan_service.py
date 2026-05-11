@@ -181,8 +181,13 @@ def resolve_allowed_analysis_path(relative_path: str, allowed_root: Path) -> Pat
     """
     Resuelve una ruta relativa estrictamente bajo ``allowed_root`` (sin ``..``).
     """
+    root_res = allowed_root.resolve()
+    if not root_res.exists() or not root_res.is_dir():
+        raise ValueError("El directorio raíz permitido no existe o no es un directorio válido")
     if not relative_path or relative_path.strip() != relative_path:
         raise ValueError("Ruta relativa inválida")
+    if "\\" in relative_path:
+        raise ValueError("La ruta relativa no puede contener separadores '\\'")
     p = Path(relative_path)
     if str(p) in {".", ""}:
         raise ValueError("La ruta relativa debe apuntar a un subdirectorio concreto")
@@ -190,7 +195,6 @@ def resolve_allowed_analysis_path(relative_path: str, allowed_root: Path) -> Pat
         raise ValueError("La ruta debe ser relativa al directorio permitido (no rutas absolutas)")
     if ".." in p.parts:
         raise ValueError("La ruta no puede contener componentes '..'")
-    root_res = allowed_root.resolve()
     target = (root_res / p).resolve()
     try:
         target.relative_to(root_res)
@@ -205,7 +209,8 @@ def resolve_allowed_analysis_path(relative_path: str, allowed_root: Path) -> Pat
 
 def analyze_local_path_relative(relative_path: str, *, allowed_root: Path) -> dict[str, Any]:
     target = resolve_allowed_analysis_path(relative_path, allowed_root)
-    label = f"local:{relative_path}"
+    normalized = str(target.relative_to(allowed_root.resolve()))
+    label = f"local:{normalized}"
     return analyze_directory(target, analysis_target_label=label)
 
 

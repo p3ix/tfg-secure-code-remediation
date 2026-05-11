@@ -264,7 +264,7 @@ def test_local_path_forbidden_without_env(monkeypatch) -> None:
 
 def test_analysis_upload_zip_success(monkeypatch) -> None:
     def fake_analyze_zip(content: bytes) -> dict:
-        assert content == b"zip-ok"
+        assert content == b"PK\x03\x04zip-ok"
         return {"analysis_target": "upload.zip", "total_findings": 0, "findings": []}
 
     monkeypatch.setattr("app.main.analyze_zip_bytes", fake_analyze_zip)
@@ -272,7 +272,7 @@ def test_analysis_upload_zip_success(monkeypatch) -> None:
     client = TestClient(app)
     r = client.post(
         "/analysis/upload-zip",
-        files={"file": ("project.zip", b"zip-ok", "application/zip")},
+        files={"file": ("project.zip", b"PK\x03\x04zip-ok", "application/zip")},
     )
 
     assert r.status_code == 200
@@ -289,7 +289,7 @@ def test_analysis_upload_zip_bad_request(monkeypatch) -> None:
     client = TestClient(app)
     r = client.post(
         "/analysis/upload-zip",
-        files={"file": ("bad.zip", b"bad", "application/zip")},
+        files={"file": ("bad.zip", b"PK\x03\x04bad", "application/zip")},
     )
 
     assert r.status_code == 400
@@ -305,7 +305,7 @@ def test_analysis_upload_zip_runtime_error(monkeypatch) -> None:
     client = TestClient(app)
     r = client.post(
         "/analysis/upload-zip",
-        files={"file": ("bad.zip", b"bad", "application/zip")},
+        files={"file": ("bad.zip", b"PK\x03\x04bad", "application/zip")},
     )
 
     assert r.status_code == 502
@@ -332,6 +332,26 @@ def test_analysis_upload_zip_rejects_non_zip_extension() -> None:
     assert "extensión .zip" in r.json()["detail"]
 
 
+def test_analysis_upload_zip_rejects_invalid_content_type() -> None:
+    client = TestClient(app)
+    r = client.post(
+        "/analysis/upload-zip",
+        files={"file": ("project.zip", b"PK\x03\x04fake", "text/plain")},
+    )
+    assert r.status_code == 400
+    assert "Tipo de contenido no permitido" in r.json()["detail"]
+
+
+def test_analysis_upload_zip_rejects_invalid_signature() -> None:
+    client = TestClient(app)
+    r = client.post(
+        "/analysis/upload-zip",
+        files={"file": ("project.zip", b"not-a-zip", "application/zip")},
+    )
+    assert r.status_code == 400
+    assert "firma ZIP válida" in r.json()["detail"]
+
+
 def test_analysis_upload_zip_payload_too_large(monkeypatch) -> None:
     def fake_analyze_zip(_: bytes) -> dict:
         raise PayloadTooLargeError("ZIP demasiado grande")
@@ -340,7 +360,7 @@ def test_analysis_upload_zip_payload_too_large(monkeypatch) -> None:
     client = TestClient(app)
     r = client.post(
         "/analysis/upload-zip",
-        files={"file": ("big.zip", b"x", "application/zip")},
+        files={"file": ("big.zip", b"PK\x03\x04x", "application/zip")},
     )
     assert r.status_code == 413
     assert "ZIP demasiado grande" in r.json()["detail"]

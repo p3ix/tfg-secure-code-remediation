@@ -86,7 +86,7 @@ def test_dashboard_analyze_runtime_renders_presentable_result(monkeypatch) -> No
 
 def test_dashboard_analyze_zip_uses_uploaded_file(monkeypatch) -> None:
     def fake_analyze_zip(content: bytes) -> dict:
-        assert content == b"zip-content"
+        assert content == b"PK\x03\x04zip-content"
         return {
             "analysis_target": "upload.zip",
             "execution_mode": "runtime",
@@ -114,7 +114,7 @@ def test_dashboard_analyze_zip_uses_uploaded_file(monkeypatch) -> None:
     response = client.post(
         "/dashboard/analyze",
         data={"analysis_mode": "upload_zip"},
-        files={"file": ("project.zip", b"zip-content", "application/zip")},
+        files={"file": ("project.zip", b"PK\x03\x04zip-content", "application/zip")},
     )
 
     assert response.status_code == 200
@@ -131,6 +131,17 @@ def test_dashboard_analyze_zip_rejects_non_zip_file() -> None:
     assert response.status_code == 200
     assert "No se pudo completar el análisis" in response.text
     assert "terminar en .zip" in response.text
+
+
+def test_dashboard_analyze_zip_rejects_invalid_signature() -> None:
+    response = client.post(
+        "/dashboard/analyze",
+        data={"analysis_mode": "upload_zip"},
+        files={"file": ("project.zip", b"not-a-zip", "application/zip")},
+    )
+    assert response.status_code == 200
+    assert "No se pudo completar el análisis" in response.text
+    assert "firma ZIP válida" in response.text
 
 
 def test_dashboard_analyze_local_path_requires_value(monkeypatch, tmp_path) -> None:
