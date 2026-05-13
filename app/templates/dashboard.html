@@ -563,7 +563,7 @@
       </p>
       <div class="hero-meta">
         <span>Dashboard HTML sobre FastAPI + Jinja</span>
-        <span>Entrada web para ZIP, fixtures y ruta local</span>
+        <span>Entrada web para ZIP, Git, fixtures y ruta local</span>
         <span>Filtros demo sin salir del navegador</span>
       </div>
     </section>
@@ -601,6 +601,20 @@
               <small>Analiza un proyecto real comprimido. Límite actual: {{ zip_max_bytes }} bytes.</small>
             </label>
 
+            <label class="mode-option{% if analysis_mode == 'git_clone' %} active{% endif %}{% if not git_clone_enabled %} disabled{% endif %}">
+              <div class="mode-head">
+                <input type="radio" name="analysis_mode" value="git_clone" {% if analysis_mode == 'git_clone' %}checked{% endif %} {% if not git_clone_enabled %}disabled{% endif %} />
+                <strong>Clonar repositorio Git</strong>
+              </div>
+              <small>
+                {% if git_clone_enabled %}
+                HTTPS habilitado. Hosts permitidos: <code>{{ git_allowed_hosts }}</code>.
+                {% else %}
+                Desactivado por configuración (<code>TFG_ENABLE_GIT_CLONE=0</code>).
+                {% endif %}
+              </small>
+            </label>
+
             <label class="mode-option{% if analysis_mode == 'local_path' %} active{% endif %}{% if not local_path_enabled %} disabled{% endif %}">
               <div class="mode-head">
                 <input type="radio" name="analysis_mode" value="local_path" {% if analysis_mode == 'local_path' %}checked{% endif %} {% if not local_path_enabled %}disabled{% endif %} />
@@ -626,6 +640,12 @@
             <label for="local_path">Ruta relativa</label>
             <input id="local_path" type="text" name="local_path" placeholder="mi-proyecto" />
             <div class="field-help">Solo se usa para análisis bajo la raíz local configurada.</div>
+          </div>
+
+          <div class="field">
+            <label for="git_url">URL Git HTTPS</label>
+            <input id="git_url" type="text" name="git_url" placeholder="https://github.com/org/repo.git" />
+            <div class="field-help">Solo se usa cuando seleccionas "Clonar repositorio Git".</div>
           </div>
 
           <div class="field">

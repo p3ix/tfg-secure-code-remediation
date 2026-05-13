@@ -89,6 +89,8 @@ def _render_dashboard(
             "local_analysis_root": str(settings.local_analysis_root)
             if settings.local_analysis_root is not None
             else None,
+            "git_clone_enabled": settings.enable_git_clone,
+            "git_allowed_hosts": ", ".join(sorted(settings.git_allowed_hosts)),
             "zip_max_bytes": settings.zip_max_bytes,
         },
     )
@@ -145,6 +147,7 @@ async def dashboard_analyze(
     hide_info: bool = Form(False),
     group_equivalent: bool = Form(False),
     local_path: str = Form(""),
+    git_url: str = Form(""),
     file: UploadFile | None = File(default=None),
 ) -> HTMLResponse:
     """
@@ -183,6 +186,15 @@ async def dashboard_analyze(
                 local_path,
                 allowed_root=settings.local_analysis_root,
             )
+        elif analysis_mode == "git_clone":
+            settings = get_settings()
+            if not settings.enable_git_clone:
+                raise PermissionError(
+                    "El análisis por git clone está desactivado en este entorno."
+                )
+            if not git_url.strip():
+                raise ValueError("Indica una URL HTTPS para el modo git_clone")
+            internal = clone_and_analyze_repo(git_url.strip())
         else:
             raise ValueError(f"Modo de análisis no soportado: {analysis_mode}")
 
