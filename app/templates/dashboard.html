@@ -558,12 +558,12 @@
         <h1>Analiza código Python y enseña el resultado con cara de producto.</h1>
       </div>
       <p class="hero-copy">
-        Esta vista unifica los informes del corpus, la ejecución runtime sobre fixtures y el análisis de proyectos reales subidos como ZIP.
-        La capa de IA para remediación queda desacoplada: aquí el foco es presentar bien el flujo detect - classify - remediate - verify.
+        Esta vista prioriza el análisis real de proyectos Python (ZIP, Git y ruta local).
+        Los modos de fixtures se mantienen como soporte de demo/MVP para validación interna.
       </p>
       <div class="hero-meta">
         <span>Dashboard HTML sobre FastAPI + Jinja</span>
-        <span>Entrada web para ZIP, Git, fixtures y ruta local</span>
+        <span>Flujo real-first: ZIP, Git y ruta local</span>
         <span>Filtros demo sin salir del navegador</span>
       </div>
     </section>
@@ -577,26 +577,10 @@
 
         <form class="stack" method="post" action="/dashboard/analyze" enctype="multipart/form-data">
           <div class="mode-grid">
-            <label class="mode-option{% if analysis_mode == 'fixture_reports' %} active{% endif %}">
-              <div class="mode-head">
-                <input type="radio" name="analysis_mode" value="fixture_reports" {% if analysis_mode == 'fixture_reports' %}checked{% endif %} />
-                <strong>Informes guardados</strong>
-              </div>
-              <small>Carga los reports estáticos del corpus MVP para demo inmediata.</small>
-            </label>
-
-            <label class="mode-option{% if analysis_mode == 'fixture_runtime' %} active{% endif %}">
-              <div class="mode-head">
-                <input type="radio" name="analysis_mode" value="fixture_runtime" {% if analysis_mode == 'fixture_runtime' %}checked{% endif %} />
-                <strong>Ejecutar fixtures</strong>
-              </div>
-              <small>Relanza Bandit y Semgrep sobre <code>fixtures/mvp</code> desde la UI.</small>
-            </label>
-
             <label class="mode-option{% if analysis_mode == 'upload_zip' %} active{% endif %}">
               <div class="mode-head">
                 <input type="radio" name="analysis_mode" value="upload_zip" {% if analysis_mode == 'upload_zip' %}checked{% endif %} />
-                <strong>Subir ZIP</strong>
+                <strong>Subir ZIP (real)</strong>
               </div>
               <small>Analiza un proyecto real comprimido. Límite actual: {{ zip_max_bytes }} bytes.</small>
             </label>
@@ -604,7 +588,7 @@
             <label class="mode-option{% if analysis_mode == 'git_clone' %} active{% endif %}{% if not git_clone_enabled %} disabled{% endif %}">
               <div class="mode-head">
                 <input type="radio" name="analysis_mode" value="git_clone" {% if analysis_mode == 'git_clone' %}checked{% endif %} {% if not git_clone_enabled %}disabled{% endif %} />
-                <strong>Clonar repositorio Git</strong>
+                <strong>Clonar repositorio Git (real)</strong>
               </div>
               <small>
                 {% if git_clone_enabled %}
@@ -618,7 +602,7 @@
             <label class="mode-option{% if analysis_mode == 'local_path' %} active{% endif %}{% if not local_path_enabled %} disabled{% endif %}">
               <div class="mode-head">
                 <input type="radio" name="analysis_mode" value="local_path" {% if analysis_mode == 'local_path' %}checked{% endif %} {% if not local_path_enabled %}disabled{% endif %} />
-                <strong>Ruta local permitida</strong>
+                <strong>Ruta local permitida (real)</strong>
               </div>
               <small>
                 {% if local_path_enabled %}
@@ -627,6 +611,22 @@
                 Desactivado hasta configurar <code>TFG_LOCAL_ANALYSIS_ROOT</code>.
                 {% endif %}
               </small>
+            </label>
+
+            <label class="mode-option{% if analysis_mode == 'fixture_reports' %} active{% endif %}">
+              <div class="mode-head">
+                <input type="radio" name="analysis_mode" value="fixture_reports" {% if analysis_mode == 'fixture_reports' %}checked{% endif %} />
+                <strong>Informes guardados (MVP/demo)</strong>
+              </div>
+              <small>Carga reports estáticos del corpus MVP para demostración rápida.</small>
+            </label>
+
+            <label class="mode-option{% if analysis_mode == 'fixture_runtime' %} active{% endif %}">
+              <div class="mode-head">
+                <input type="radio" name="analysis_mode" value="fixture_runtime" {% if analysis_mode == 'fixture_runtime' %}checked{% endif %} />
+                <strong>Ejecutar fixtures (MVP/demo)</strong>
+              </div>
+              <small>Relanza Bandit y Semgrep sobre <code>fixtures/mvp</code> para validación interna.</small>
             </label>
           </div>
 
