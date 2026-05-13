@@ -42,6 +42,35 @@ def _preview_output(text: str, limit: int = 600) -> str:
     return cleaned[:limit] + "...(truncado)"
 
 
+def _validate_analysis_tree_size(
+    root: Path,
+    *,
+    max_files: int,
+    max_bytes: int,
+) -> None:
+    file_count = 0
+    total_bytes = 0
+    for path in root.rglob("*"):
+        if not path.is_file():
+            continue
+        file_count += 1
+        if file_count > max_files:
+            raise ValueError(
+                f"Árbol demasiado grande: supera el límite de ficheros ({max_files}). "
+                "Ajustar TFG_ANALYSIS_MAX_FILES si es necesario."
+            )
+        try:
+            total_bytes += path.stat().st_size
+        except OSError:
+            # Ignora ficheros inaccesibles puntuales; Bandit/Semgrep los tratarán aparte.
+            continue
+        if total_bytes > max_bytes:
+            raise ValueError(
+                f"Árbol demasiado grande: supera el límite de bytes ({max_bytes}). "
+                "Ajustar TFG_ANALYSIS_MAX_BYTES si es necesario."
+            )
+
+
 def _validate_https_git_url(url: str, allowed_hosts: frozenset[str]) -> None:
     parsed = urlparse(url)
     if parsed.scheme != "https":
@@ -122,6 +151,12 @@ def analyze_directory(
     root = target.resolve()
     if not root.is_dir():
         raise FileNotFoundError(f"No es un directorio: {root}")
+    settings = get_settings()
+    _validate_analysis_tree_size(
+        root,
+        max_files=settings.analysis_max_files,
+        max_bytes=settings.analysis_max_bytes,
+    )
 
     with tempfile.TemporaryDirectory(prefix="tfg-scan-") as td:
         td_path = Path(td)

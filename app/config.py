@@ -98,6 +98,17 @@ class Settings:
             600,
             minimum=0,
         )
+        # Límites previos al escaneo para árboles muy grandes.
+        self.analysis_max_files: int = _parse_int_env(
+            "TFG_ANALYSIS_MAX_FILES",
+            20_000,
+            minimum=1,
+        )
+        self.analysis_max_bytes: int = _parse_int_env(
+            "TFG_ANALYSIS_MAX_BYTES",
+            300 * 1024 * 1024,
+            minimum=1,
+        )
         self.analysis_exclude_patterns: tuple[str, ...] = _parse_csv_env(
             "TFG_ANALYSIS_EXCLUDE_DIRS",
             _DEFAULT_ANALYSIS_EXCLUDE_DIRS,
