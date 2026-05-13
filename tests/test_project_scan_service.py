@@ -293,7 +293,9 @@ def test_analysis_upload_zip_bad_request(monkeypatch) -> None:
     )
 
     assert r.status_code == 400
-    assert "zip invalido" in r.json()["detail"]
+    detail = r.json()["detail"]
+    assert detail["error_code"] == "ANALYSIS_BAD_REQUEST"
+    assert "zip invalido" in detail["message"]
 
 
 def test_analysis_upload_zip_runtime_error(monkeypatch) -> None:
@@ -309,7 +311,9 @@ def test_analysis_upload_zip_runtime_error(monkeypatch) -> None:
     )
 
     assert r.status_code == 502
-    assert "bandit no disponible" in r.json()["detail"]
+    detail = r.json()["detail"]
+    assert detail["error_code"] == "ANALYSIS_RUNTIME_ERROR"
+    assert "bandit no disponible" in detail["message"]
 
 
 def test_analysis_upload_zip_empty_content() -> None:
@@ -319,7 +323,9 @@ def test_analysis_upload_zip_empty_content() -> None:
         files={"file": ("project.zip", b"", "application/zip")},
     )
     assert r.status_code == 400
-    assert "No se recibió contenido ZIP" in r.json()["detail"]
+    detail = r.json()["detail"]
+    assert detail["error_code"] == "ZIP_EMPTY_CONTENT"
+    assert "No se recibió contenido ZIP" in detail["message"]
 
 
 def test_analysis_upload_zip_rejects_non_zip_extension() -> None:
@@ -329,7 +335,9 @@ def test_analysis_upload_zip_rejects_non_zip_extension() -> None:
         files={"file": ("project.txt", b"abc", "text/plain")},
     )
     assert r.status_code == 400
-    assert "extensión .zip" in r.json()["detail"]
+    detail = r.json()["detail"]
+    assert detail["error_code"] == "ZIP_EXTENSION_REQUIRED"
+    assert "extensión .zip" in detail["message"]
 
 
 def test_analysis_upload_zip_rejects_invalid_content_type() -> None:
@@ -339,7 +347,9 @@ def test_analysis_upload_zip_rejects_invalid_content_type() -> None:
         files={"file": ("project.zip", b"PK\x03\x04fake", "text/plain")},
     )
     assert r.status_code == 400
-    assert "Tipo de contenido no permitido" in r.json()["detail"]
+    detail = r.json()["detail"]
+    assert detail["error_code"] == "ZIP_CONTENT_TYPE_INVALID"
+    assert "Tipo de contenido no permitido" in detail["message"]
 
 
 def test_analysis_upload_zip_rejects_invalid_signature() -> None:
@@ -349,7 +359,22 @@ def test_analysis_upload_zip_rejects_invalid_signature() -> None:
         files={"file": ("project.zip", b"not-a-zip", "application/zip")},
     )
     assert r.status_code == 400
-    assert "firma ZIP válida" in r.json()["detail"]
+    detail = r.json()["detail"]
+    assert detail["error_code"] == "ZIP_INVALID_SIGNATURE"
+    assert "firma ZIP válida" in detail["message"]
+
+
+def test_api_error_contract_has_code_and_message() -> None:
+    client = TestClient(app)
+    r = client.post(
+        "/analysis/upload-zip",
+        files={"file": ("project.zip", b"not-a-zip", "application/zip")},
+    )
+    assert r.status_code == 400
+    detail = r.json()["detail"]
+    assert set(detail.keys()) == {"error_code", "message"}
+    assert isinstance(detail["error_code"], str)
+    assert isinstance(detail["message"], str)
 
 
 def test_analysis_upload_zip_payload_too_large(monkeypatch) -> None:
@@ -363,7 +388,9 @@ def test_analysis_upload_zip_payload_too_large(monkeypatch) -> None:
         files={"file": ("big.zip", b"PK\x03\x04x", "application/zip")},
     )
     assert r.status_code == 413
-    assert "ZIP demasiado grande" in r.json()["detail"]
+    detail = r.json()["detail"]
+    assert detail["error_code"] == "ZIP_TOO_LARGE"
+    assert "ZIP demasiado grande" in detail["message"]
 
 
 def test_analysis_git_clone_success(monkeypatch) -> None:
@@ -393,7 +420,9 @@ def test_analysis_git_clone_bad_request(monkeypatch) -> None:
     r = client.post("/analysis/git-clone", json={"url": "https://example.com/r.git"})
 
     assert r.status_code == 400
-    assert "URL invalida" in r.json()["detail"]
+    detail = r.json()["detail"]
+    assert detail["error_code"] == "ANALYSIS_BAD_REQUEST"
+    assert "URL invalida" in detail["message"]
 
 
 def test_analysis_git_clone_forbidden(monkeypatch) -> None:
@@ -406,7 +435,9 @@ def test_analysis_git_clone_forbidden(monkeypatch) -> None:
     r = client.post("/analysis/git-clone", json={"url": "https://example.com/r.git"})
 
     assert r.status_code == 403
-    assert "clonado desactivado" in r.json()["detail"]
+    detail = r.json()["detail"]
+    assert detail["error_code"] == "GIT_CLONE_DISABLED"
+    assert "clonado desactivado" in detail["message"]
 
 
 def test_analysis_git_clone_runtime_error(monkeypatch) -> None:
@@ -419,7 +450,9 @@ def test_analysis_git_clone_runtime_error(monkeypatch) -> None:
     r = client.post("/analysis/git-clone", json={"url": "https://example.com/r.git"})
 
     assert r.status_code == 502
-    assert "git clone fallo" in r.json()["detail"]
+    detail = r.json()["detail"]
+    assert detail["error_code"] == "GIT_CLONE_FAILED"
+    assert "git clone fallo" in detail["message"]
 
 
 def test_clone_and_analyze_repo_service_success(monkeypatch, tmp_path) -> None:
@@ -563,7 +596,9 @@ def test_local_path_with_root_bad_request(monkeypatch, tmp_path) -> None:
         client = TestClient(app)
         r = client.post("/analysis/local-path", json={"relative_path": "../evil"})
         assert r.status_code == 400
-        assert "ruta invalida" in r.json()["detail"]
+        detail = r.json()["detail"]
+        assert detail["error_code"] == "LOCAL_PATH_INVALID"
+        assert "ruta invalida" in detail["message"]
     finally:
         get_settings.cache_clear()
 
@@ -583,7 +618,9 @@ def test_local_path_with_root_not_found(monkeypatch, tmp_path) -> None:
         client = TestClient(app)
         r = client.post("/analysis/local-path", json={"relative_path": "missing"})
         assert r.status_code == 404
-        assert "proyecto no encontrado" in r.json()["detail"]
+        detail = r.json()["detail"]
+        assert detail["error_code"] == "LOCAL_PATH_NOT_FOUND"
+        assert "proyecto no encontrado" in detail["message"]
     finally:
         get_settings.cache_clear()
 
@@ -603,6 +640,8 @@ def test_local_path_with_root_runtime_error(monkeypatch, tmp_path) -> None:
         client = TestClient(app)
         r = client.post("/analysis/local-path", json={"relative_path": "proj"})
         assert r.status_code == 502
-        assert "bandit timeout" in r.json()["detail"]
+        detail = r.json()["detail"]
+        assert detail["error_code"] == "ANALYSIS_RUNTIME_ERROR"
+        assert "bandit timeout" in detail["message"]
     finally:
         get_settings.cache_clear()
