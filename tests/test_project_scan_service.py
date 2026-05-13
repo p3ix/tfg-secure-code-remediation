@@ -105,6 +105,36 @@ def test_analyze_directory_rejects_non_directory(tmp_path) -> None:
         analyze_directory(file_path, analysis_target_label="local:test")
 
 
+def test_analyze_directory_rejects_too_many_files(monkeypatch, tmp_path) -> None:
+    target = tmp_path / "target"
+    target.mkdir()
+    for i in range(3):
+        (target / f"f{i}.py").write_text("print('x')", encoding="utf-8")
+
+    monkeypatch.setenv("TFG_ANALYSIS_MAX_FILES", "2")
+    get_settings.cache_clear()
+    try:
+        with pytest.raises(ValueError, match="límite de ficheros"):
+            analyze_directory(target, analysis_target_label="local:test")
+    finally:
+        get_settings.cache_clear()
+
+
+def test_analyze_directory_rejects_too_many_bytes(monkeypatch, tmp_path) -> None:
+    target = tmp_path / "target"
+    target.mkdir()
+    (target / "big.py").write_text("x" * 50, encoding="utf-8")
+
+    monkeypatch.setenv("TFG_ANALYSIS_MAX_FILES", "10")
+    monkeypatch.setenv("TFG_ANALYSIS_MAX_BYTES", "40")
+    get_settings.cache_clear()
+    try:
+        with pytest.raises(ValueError, match="límite de bytes"):
+            analyze_directory(target, analysis_target_label="local:test")
+    finally:
+        get_settings.cache_clear()
+
+
 def test_analyze_directory_fails_when_bandit_report_missing(monkeypatch, tmp_path) -> None:
     target = tmp_path / "target"
     target.mkdir()
