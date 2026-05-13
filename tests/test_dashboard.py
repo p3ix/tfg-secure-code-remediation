@@ -25,6 +25,10 @@ def test_dashboard_renders_html_when_reports_exist() -> None:
     assert "text/html" in response.headers.get("content-type", "")
     assert "Resultado del escaneo" in response.text
     assert "Nuevo análisis" in response.text
+    assert "Subir ZIP (real)" in response.text
+    assert "Clonar repositorio Git (real)" in response.text
+    assert "Ruta local permitida (real)" in response.text
+    assert "Informes guardados (MVP/demo)" in response.text
     assert "schema_version" in response.text or "Total hallazgos" in response.text
 
 
