@@ -193,3 +193,60 @@ def test_dashboard_analyze_local_path_error_is_rendered(monkeypatch) -> None:
     assert response.status_code == 200
     assert "No se pudo completar el análisis" in response.text
     assert "ruta local" in response.text.lower()
+
+
+def test_dashboard_analyze_git_clone_success(monkeypatch) -> None:
+    def fake_clone(url: str) -> dict:
+        assert url == "https://github.com/octocat/Hello-World.git"
+        return {
+            "analysis_target": f"git:{url}",
+            "execution_mode": "runtime",
+            "generated_reports": {"bandit": "(temporal)", "semgrep": "(temporal)"},
+            "findings": [],
+        }
+
+    monkeypatch.setattr("app.main.clone_and_analyze_repo", fake_clone)
+    response = client.post(
+        "/dashboard/analyze",
+        data={
+            "analysis_mode": "git_clone",
+            "git_url": "https://github.com/octocat/Hello-World.git",
+        },
+    )
+    assert response.status_code == 200
+    assert "git:https://github.com/octocat/Hello-World.git" in response.text
+
+
+def test_dashboard_analyze_git_clone_requires_url(monkeypatch) -> None:
+    from app.config import get_settings
+
+    monkeypatch.setenv("TFG_ENABLE_GIT_CLONE", "1")
+    get_settings.cache_clear()
+    try:
+        response = client.post(
+            "/dashboard/analyze",
+            data={"analysis_mode": "git_clone", "git_url": "   "},
+        )
+        assert response.status_code == 200
+        assert "Indica una URL HTTPS para el modo git_clone" in response.text
+    finally:
+        get_settings.cache_clear()
+
+
+def test_dashboard_analyze_git_clone_disabled(monkeypatch) -> None:
+    from app.config import get_settings
+
+    monkeypatch.setenv("TFG_ENABLE_GIT_CLONE", "0")
+    get_settings.cache_clear()
+    try:
+        response = client.post(
+            "/dashboard/analyze",
+            data={
+                "analysis_mode": "git_clone",
+                "git_url": "https://github.com/octocat/Hello-World.git",
+            },
+        )
+        assert response.status_code == 200
+        assert "git clone está desactivado" in response.text
+    finally:
+        get_settings.cache_clear()
