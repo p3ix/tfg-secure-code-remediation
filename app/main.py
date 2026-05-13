@@ -50,6 +50,67 @@ def _looks_like_zip(content: bytes) -> bool:
     return content.startswith((b"PK\x03\x04", b"PK\x05\x06", b"PK\x07\x08"))
 
 
+def _map_analysis_error(exc: Exception, *, analysis_mode: str) -> tuple[int, str, str]:
+    text = str(exc)
+
+    if isinstance(exc, PayloadTooLargeError):
+        return 413, "ZIP_TOO_LARGE", text
+
+    if isinstance(exc, PermissionError):
+        if analysis_mode == "git_clone":
+            return 403, "GIT_CLONE_DISABLED", text
+        if analysis_mode == "local_path":
+            return 403, "LOCAL_PATH_DISABLED", text
+        return 403, "ANALYSIS_FORBIDDEN", text
+
+    if isinstance(exc, FileNotFoundError):
+        if analysis_mode == "local_path":
+            return 404, "LOCAL_PATH_NOT_FOUND", text
+        if analysis_mode == "fixture_reports":
+            return 500, "FIXTURE_REPORTS_MISSING", text
+        return 404, "RESOURCE_NOT_FOUND", text
+
+    if isinstance(exc, ValueError):
+        if "extensión .zip" in text:
+            return 400, "ZIP_EXTENSION_REQUIRED", text
+        if "firma ZIP válida" in text:
+            return 400, "ZIP_INVALID_SIGNATURE", text
+        if "Tipo de contenido no permitido" in text:
+            return 400, "ZIP_CONTENT_TYPE_INVALID", text
+        if "No se recibió contenido ZIP" in text or "ZIP está vacío" in text:
+            return 400, "ZIP_EMPTY_CONTENT", text
+        if "URL HTTPS" in text and analysis_mode == "git_clone":
+            return 400, "GIT_URL_REQUIRED", text
+        if "Host no permitido" in text:
+            return 400, "GIT_HOST_NOT_ALLOWED", text
+        if "https://" in text:
+            return 400, "GIT_URL_INVALID", text
+        if analysis_mode == "local_path":
+            return 400, "LOCAL_PATH_INVALID", text
+        if "Modo de análisis no soportado" in text:
+            return 400, "ANALYSIS_MODE_UNSUPPORTED", text
+        return 400, "ANALYSIS_BAD_REQUEST", text
+
+    if isinstance(exc, RuntimeError):
+        if "comando 'git' no disponible" in text:
+            return 502, "GIT_BINARY_MISSING", text
+        if "git clone superó el tiempo límite" in text:
+            return 502, "GIT_CLONE_TIMEOUT", text
+        if "git clone falló" in text or "git clone fallo" in text:
+            return 502, "GIT_CLONE_FAILED", text
+        if "superó el tiempo límite" in text:
+            return 502, "ANALYZER_TIMEOUT", text
+        if "no generó informe" in text:
+            return 502, "ANALYZER_REPORT_MISSING", text
+        return 502, "ANALYSIS_RUNTIME_ERROR", text
+
+    return 500, "ANALYSIS_INTERNAL_ERROR", text
+
+
+def _error_detail(error_code: str, message: str) -> dict[str, str]:
+    return {"error_code": error_code, "message": message}
+
+
 def _build_dashboard_scan(
     internal_scan: dict,
     *,
@@ -211,13 +272,14 @@ async def dashboard_analyze(
             analysis_mode=analysis_mode,
         )
     except (FileNotFoundError, PermissionError, RuntimeError, ValueError, PayloadTooLargeError) as exc:
+        _, code, msg = _map_analysis_error(exc, analysis_mode=analysis_mode)
         return _render_dashboard(
             request,
             scan=None,
             hide_info=hide_info,
             group_equivalent=group_equivalent,
             analysis_mode=analysis_mode,
-            analysis_error=str(exc),
+            analysis_error=f"[{code}] {msg}",
         )
 
 @app.get("/health")
@@ -251,36 +313,37 @@ async def analysis_upload_zip(
     """
     content = await file.read()
     if not content:
-        raise HTTPException(
-            status_code=400,
-            detail="No se recibió contenido ZIP en el fichero subido.",
+        status, code, msg = _map_analysis_error(
+            ValueError("No se recibió contenido ZIP en el fichero subido."),
+            analysis_mode="upload_zip",
         )
+        raise HTTPException(status_code=status, detail=_error_detail(code, msg))
     if file.filename and not file.filename.lower().endswith(".zip"):
-        raise HTTPException(
-            status_code=400,
-            detail="El fichero debe tener extensión .zip",
+        status, code, msg = _map_analysis_error(
+            ValueError("El fichero debe tener extensión .zip"),
+            analysis_mode="upload_zip",
         )
+        raise HTTPException(status_code=status, detail=_error_detail(code, msg))
     if file.content_type and file.content_type not in _ALLOWED_ZIP_CONTENT_TYPES:
-        raise HTTPException(
-            status_code=400,
-            detail=(
+        status, code, msg = _map_analysis_error(
+            ValueError(
                 "Tipo de contenido no permitido para ZIP. "
                 f"Recibido: {file.content_type}"
             ),
+            analysis_mode="upload_zip",
         )
+        raise HTTPException(status_code=status, detail=_error_detail(code, msg))
     if not _looks_like_zip(content):
-        raise HTTPException(
-            status_code=400,
-            detail="El contenido subido no tiene firma ZIP válida",
+        status, code, msg = _map_analysis_error(
+            ValueError("El contenido subido no tiene firma ZIP válida"),
+            analysis_mode="upload_zip",
         )
+        raise HTTPException(status_code=status, detail=_error_detail(code, msg))
     try:
         return analyze_zip_bytes(content)
-    except PayloadTooLargeError as exc:
-        raise HTTPException(status_code=413, detail=str(exc)) from exc
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-    except RuntimeError as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    except (PayloadTooLargeError, ValueError, RuntimeError) as exc:
+        status, code, msg = _map_analysis_error(exc, analysis_mode="upload_zip")
+        raise HTTPException(status_code=status, detail=_error_detail(code, msg)) from exc
 
 
 @app.post("/analysis/git-clone")
@@ -292,12 +355,9 @@ def analysis_git_clone(body: GitCloneRequest) -> dict:
     """
     try:
         return clone_and_analyze_repo(body.url)
-    except PermissionError as exc:
-        raise HTTPException(status_code=403, detail=str(exc)) from exc
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-    except RuntimeError as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    except (PermissionError, ValueError, RuntimeError) as exc:
+        status, code, msg = _map_analysis_error(exc, analysis_mode="git_clone")
+        raise HTTPException(status_code=status, detail=_error_detail(code, msg)) from exc
 
 
 @app.post("/analysis/local-path")
@@ -308,23 +368,21 @@ def analysis_local_path(body: LocalPathRequest) -> dict:
     """
     s = get_settings()
     if s.local_analysis_root is None:
-        raise HTTPException(
-            status_code=403,
-            detail=(
+        status, code, msg = _map_analysis_error(
+            PermissionError(
                 "Análisis por ruta local desactivado: definir la variable de entorno "
                 "TFG_LOCAL_ANALYSIS_ROOT con un directorio permitido."
             ),
+            analysis_mode="local_path",
         )
+        raise HTTPException(status_code=status, detail=_error_detail(code, msg))
     try:
         return analyze_local_path_relative(
             body.relative_path, allowed_root=s.local_analysis_root
         )
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-    except FileNotFoundError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
-    except RuntimeError as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    except (ValueError, FileNotFoundError, RuntimeError) as exc:
+        status, code, msg = _map_analysis_error(exc, analysis_mode="local_path")
+        raise HTTPException(status_code=status, detail=_error_detail(code, msg)) from exc
 
 
 @app.get("/ai/status")

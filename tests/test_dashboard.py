@@ -145,6 +145,7 @@ def test_dashboard_analyze_zip_rejects_invalid_signature() -> None:
     )
     assert response.status_code == 200
     assert "No se pudo completar el análisis" in response.text
+    assert "[ZIP_INVALID_SIGNATURE]" in response.text
     assert "firma ZIP válida" in response.text
 
 
@@ -251,6 +252,7 @@ def test_dashboard_analyze_git_clone_disabled(monkeypatch) -> None:
             },
         )
         assert response.status_code == 200
+        assert "[GIT_CLONE_DISABLED]" in response.text
         assert "git clone está desactivado" in response.text
     finally:
         get_settings.cache_clear()
