@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import subprocess
 import sys
 from dataclasses import asdict
@@ -15,6 +16,7 @@ FIXTURES_TARGET = Path("fixtures/mvp")
 RUNTIME_REPORTS_DIR = Path("reports/runtime")
 BANDIT_RUNTIME_REPORT = RUNTIME_REPORTS_DIR / "fixtures-mvp-bandit-runtime.json"
 SEMGREP_RUNTIME_REPORT = RUNTIME_REPORTS_DIR / "fixtures-mvp-semgrep-runtime.json"
+logger = logging.getLogger(__name__)
 
 
 def _resolve_tool_command(binary_name: str, module_name: str) -> list[str]:
@@ -97,6 +99,11 @@ def _preview_output(text: str, limit: int = 600) -> str:
     return cleaned[:limit] + "...(truncado)"
 
 
+def _log_stage(event: str, **fields: Any) -> None:
+    payload = {"event": event, **fields}
+    logger.info("analysis_stage=%s payload=%s", event, payload)
+
+
 def run_analysis_command(command: list[str]) -> subprocess.CompletedProcess[str]:
     """
     Ejecuta Bandit o Semgrep con el límite de tiempo global (`TFG_ANALYSIS_TIMEOUT_SEC`).
@@ -120,17 +127,32 @@ def run_analysis_command(command: list[str]) -> subprocess.CompletedProcess[str]
         ) from exc
 
 
-def analyze_fixtures_runtime() -> dict[str, Any]:
+def analyze_fixtures_runtime(*, analysis_id: str | None = None) -> dict[str, Any]:
     if not FIXTURES_TARGET.exists():
         raise FileNotFoundError(f"Analysis target not found: {FIXTURES_TARGET}")
 
     RUNTIME_REPORTS_DIR.mkdir(parents=True, exist_ok=True)
+    _log_stage(
+        "fixtures_runtime_start",
+        analysis_id=analysis_id,
+        target=str(FIXTURES_TARGET),
+    )
 
     bandit_cmd = build_bandit_command(FIXTURES_TARGET, BANDIT_RUNTIME_REPORT)
     semgrep_cmd = build_semgrep_command(FIXTURES_TARGET, SEMGREP_RUNTIME_REPORT)
 
     bandit_result = run_analysis_command(bandit_cmd)
+    _log_stage(
+        "fixtures_runtime_bandit_done",
+        analysis_id=analysis_id,
+        returncode=bandit_result.returncode,
+    )
     semgrep_result = run_analysis_command(semgrep_cmd)
+    _log_stage(
+        "fixtures_runtime_semgrep_done",
+        analysis_id=analysis_id,
+        returncode=semgrep_result.returncode,
+    )
 
     if not BANDIT_RUNTIME_REPORT.exists():
         raise RuntimeError(
@@ -147,8 +169,14 @@ def analyze_fixtures_runtime() -> dict[str, Any]:
         semgrep_report_path=SEMGREP_RUNTIME_REPORT,
     )
     enriched_findings = enrich_findings_with_classification(findings)
+    _log_stage(
+        "fixtures_runtime_parse_done",
+        analysis_id=analysis_id,
+        findings=len(enriched_findings),
+    )
 
     return {
+        "analysis_id": analysis_id,
         "analysis_target": str(FIXTURES_TARGET),
         "execution_mode": "runtime",
         "generated_reports": {

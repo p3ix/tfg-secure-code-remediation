@@ -52,6 +52,7 @@ def test_run_fixtures_endpoint_returns_runtime_payload(monkeypatch) -> None:
     assert payload["execution_mode"] == "runtime"
     assert payload["total_findings"] == 2
     assert len(payload["findings"]) == 2
+    assert isinstance(payload["analysis_id"], str)
 
 
 def test_run_fixtures_presentable_endpoint_returns_filtered_payload(monkeypatch) -> None:
@@ -100,6 +101,7 @@ def test_run_fixtures_presentable_endpoint_returns_filtered_payload(monkeypatch)
     payload = response.json()
     assert payload["schema_version"] == "1.0"
     assert payload["meta"]["execution_mode"] == "runtime"
+    assert isinstance(payload["meta"]["analysis_id"], str)
     assert payload["meta"]["presentable_filter"] == "hide_info"
     assert payload["summary"]["total_findings"] == 1
     assert payload["findings"][0]["category"] == "missing_timeout"

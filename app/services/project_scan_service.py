@@ -8,6 +8,8 @@ en `reports/runtime/` para evitar colisiones entre peticiones.
 from __future__ import annotations
 
 import io
+import inspect
+import logging
 import subprocess
 import tempfile
 import zipfile
@@ -26,6 +28,8 @@ from app.services.runtime_analysis_service import (
     run_analysis_command,
 )
 
+logger = logging.getLogger(__name__)
+
 
 class PayloadTooLargeError(ValueError):
     """Error de validación cuando la entrada supera un límite de tamaño."""
@@ -40,6 +44,30 @@ def _preview_output(text: str, limit: int = 600) -> str:
     if len(cleaned) <= limit:
         return cleaned
     return cleaned[:limit] + "...(truncado)"
+
+
+def _log_stage(event: str, **fields: Any) -> None:
+    payload = {"event": event, **fields}
+    logger.info("analysis_stage=%s payload=%s", event, payload)
+
+
+def _call_analyze_directory(
+    target: Path,
+    *,
+    analysis_target_label: str,
+    analysis_id: str | None,
+) -> dict[str, Any]:
+    try:
+        sig = inspect.signature(analyze_directory)
+    except (TypeError, ValueError):
+        sig = None
+    if sig is not None and "analysis_id" in sig.parameters:
+        return analyze_directory(
+            target,
+            analysis_target_label=analysis_target_label,
+            analysis_id=analysis_id,
+        )
+    return analyze_directory(target, analysis_target_label=analysis_target_label)
 
 
 def _validate_analysis_tree_size(
@@ -143,6 +171,7 @@ def analyze_directory(
     target: Path,
     *,
     analysis_target_label: str,
+    analysis_id: str | None = None,
 ) -> dict[str, Any]:
     """
     Ejecuta Bandit y Semgrep sobre `target` (directorio) y devuelve el mismo
@@ -157,6 +186,12 @@ def analyze_directory(
         max_files=settings.analysis_max_files,
         max_bytes=settings.analysis_max_bytes,
     )
+    _log_stage(
+        "scan_start",
+        analysis_id=analysis_id,
+        target=str(root),
+        label=analysis_target_label,
+    )
 
     with tempfile.TemporaryDirectory(prefix="tfg-scan-") as td:
         td_path = Path(td)
@@ -166,7 +201,17 @@ def analyze_directory(
         semgrep_cmd = build_semgrep_command(root, semgrep_report)
 
         bandit_result = run_analysis_command(bandit_cmd)
+        _log_stage(
+            "bandit_done",
+            analysis_id=analysis_id,
+            returncode=bandit_result.returncode,
+        )
         semgrep_result = run_analysis_command(semgrep_cmd)
+        _log_stage(
+            "semgrep_done",
+            analysis_id=analysis_id,
+            returncode=semgrep_result.returncode,
+        )
 
         if not bandit_report.exists():
             raise RuntimeError(
@@ -186,8 +231,14 @@ def analyze_directory(
             semgrep_report_path=semgrep_report,
         )
         enriched = enrich_findings_with_classification(findings)
+        _log_stage(
+            "scan_parse_done",
+            analysis_id=analysis_id,
+            findings=len(enriched),
+        )
 
         return {
+            "analysis_id": analysis_id,
             "analysis_target": analysis_target_label,
             "execution_mode": "runtime",
             "generated_reports": {
@@ -242,14 +293,20 @@ def resolve_allowed_analysis_path(relative_path: str, allowed_root: Path) -> Pat
     return target
 
 
-def analyze_local_path_relative(relative_path: str, *, allowed_root: Path) -> dict[str, Any]:
+def analyze_local_path_relative(
+    relative_path: str, *, allowed_root: Path, analysis_id: str | None = None
+) -> dict[str, Any]:
     target = resolve_allowed_analysis_path(relative_path, allowed_root)
     normalized = str(target.relative_to(allowed_root.resolve()))
     label = f"local:{normalized}"
-    return analyze_directory(target, analysis_target_label=label)
+    return _call_analyze_directory(
+        target,
+        analysis_target_label=label,
+        analysis_id=analysis_id,
+    )
 
 
-def analyze_zip_bytes(zip_bytes: bytes) -> dict[str, Any]:
+def analyze_zip_bytes(zip_bytes: bytes, *, analysis_id: str | None = None) -> dict[str, Any]:
     settings = get_settings()
     if len(zip_bytes) > settings.zip_max_bytes:
         raise PayloadTooLargeError(
@@ -260,18 +317,25 @@ def analyze_zip_bytes(zip_bytes: bytes) -> dict[str, Any]:
     with tempfile.TemporaryDirectory(prefix="tfg-unzip-") as td:
         dest = Path(td) / "src"
         dest.mkdir(parents=True)
+        _log_stage("zip_extract_start", analysis_id=analysis_id)
         extract_zip_safely(zip_bytes, dest, max_uncompressed_bytes=max_uncompressed)
+        _log_stage("zip_extract_done", analysis_id=analysis_id)
         label = "upload.zip (contenido extraído)"
-        return analyze_directory(dest, analysis_target_label=label)
+        return _call_analyze_directory(
+            dest,
+            analysis_target_label=label,
+            analysis_id=analysis_id,
+        )
 
 
-def clone_and_analyze_repo(url: str) -> dict[str, Any]:
+def clone_and_analyze_repo(url: str, *, analysis_id: str | None = None) -> dict[str, Any]:
     settings = get_settings()
     if not settings.enable_git_clone:
         raise PermissionError(
             "Clonado Git desactivado (TFG_ENABLE_GIT_CLONE=0). Activar solo en entornos de confianza."
         )
     _validate_https_git_url(url, settings.git_allowed_hosts)
+    _log_stage("git_clone_start", analysis_id=analysis_id, url=url)
 
     with tempfile.TemporaryDirectory(prefix="tfg-git-") as td:
         clone_dir = Path(td) / "repo"
@@ -307,7 +371,12 @@ def clone_and_analyze_repo(url: str) -> dict[str, Any]:
         if not clone_dir.is_dir():
             raise RuntimeError("Clonado incompleto: no existe el directorio del repositorio.")
 
-        out = analyze_directory(clone_dir, analysis_target_label=f"git:{url}")
+        out = _call_analyze_directory(
+            clone_dir,
+            analysis_target_label=f"git:{url}",
+            analysis_id=analysis_id,
+        )
+        out["analysis_id"] = analysis_id
         out["meta"] = {
             "clone_url": url,
             "git_returncode": proc.returncode,
@@ -315,4 +384,5 @@ def clone_and_analyze_repo(url: str) -> dict[str, Any]:
             "git_stdout_preview": _preview_output(proc.stdout),
             "git_stderr_preview": _preview_output(proc.stderr),
         }
+        _log_stage("git_clone_done", analysis_id=analysis_id, url=url)
         return out
