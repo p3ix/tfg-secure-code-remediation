@@ -15,6 +15,7 @@ En **ampliación**: análisis de **proyectos reales** (subida ZIP, ruta local ba
 | [`docs/00_scope.md`](docs/00_scope.md) | Alcance MVP y fases siguientes |
 | [`docs/01_roadmap_and_documentation_ritual.md`](docs/01_roadmap_and_documentation_ritual.md) | Hoja de ruta, ritual issues/docs, cadencia memoria |
 | [`docs/01_architecture_overview.md`](docs/01_architecture_overview.md) | Arquitectura |
+| [`docs/04_delivery/manual-usuario-web.md`](docs/04_delivery/manual-usuario-web.md) | Manual de usuario de la consola web (`/dashboard`) |
 | [`docs/03_experiments/dashboard-web-analysis-console.md`](docs/03_experiments/dashboard-web-analysis-console.md) | Evolución de la interfaz web de análisis |
 | [`docs/06_references/README.md`](docs/06_references/README.md) | Referencias [REF-xxx] |
 
@@ -55,20 +56,19 @@ uvicorn app.main:app --reload
 
 ### Dashboard web
 
-La vista `/dashboard` actúa como consola ligera del MVP:
+La vista [`/dashboard`](http://127.0.0.1:8000/dashboard) actúa como consola de análisis:
 
-- carga informes estáticos del corpus `fixtures/mvp/`;
-- puede relanzar el análisis runtime de fixtures desde la propia web;
-- permite subir un ZIP para analizar un proyecto real;
-- si `TFG_LOCAL_ANALYSIS_ROOT` está configurado, habilita análisis por ruta local relativa.
+- modos **reales** (priorizados en el formulario): subida **ZIP**, **clon Git HTTPS** y **ruta local** bajo `TFG_LOCAL_ANALYSIS_ROOT` (si está habilitada la combinación raíz + `TFG_ENABLE_LOCAL_PATH`);
+- modos **MVP/demo**: informes estáticos del corpus `fixtures/mvp` y re-ejecución runtime sobre esos fixtures;
+- opciones de vista: **demo** (`hide_info`) y **agrupar equivalentes** (`group_equivalent`);
+- resultados en JSON **presentable** con `analysis_id` para trazabilidad.
 
-La interfaz reutiliza el mismo JSON presentable del backend, por lo que sirve tanto para demo como para memoria.
-El modo `git clone` permanece como endpoint API (`POST /analysis/git-clone`) y no está integrado como opción directa del formulario web en esta iteración.
+**Guía detallada:** [`docs/04_delivery/manual-usuario-web.md`](docs/04_delivery/manual-usuario-web.md).
 
 ### Análisis de proyectos reales (nuevo)
 
 - `POST /analysis/upload-zip` — cuerpo: fichero `multipart/form-data` (campo típico `file`). Límite por defecto ~20 MB (`TFG_ZIP_MAX_BYTES`).
-- `POST /analysis/local-path` — JSON `{"relative_path": "mi-proyecto"}`: analiza un subdirectorio **relativo** bajo `TFG_LOCAL_ANALYSIS_ROOT` (definir en el servidor; sin rutas absolutas ni `..`). Si la variable no está definida, el endpoint responde 403.
+- `POST /analysis/local-path` — JSON `{"relative_path": "mi-proyecto"}`: analiza un subdirectorio **relativo** bajo `TFG_LOCAL_ANALYSIS_ROOT` (definir en el servidor; sin rutas absolutas ni `..`). Responde 403 si falta la raíz, está desactivado `TFG_ENABLE_LOCAL_PATH` o la combinación no permite el modo.
 - `POST /analysis/git-clone` — JSON `{"url": "https://github.com/org/repo"}` (HTTPS, hosts permitidos por `TFG_GIT_ALLOWED_HOSTS`). Desactivar clonado con `TFG_ENABLE_GIT_CLONE=0`.
 
 Variables útiles: `TFG_ZIP_MAX_BYTES`, `TFG_LOCAL_ANALYSIS_ROOT`, `TFG_GIT_CLONE_TIMEOUT`, `TFG_ANALYSIS_TIMEOUT_SEC` (segundos **por** invocación de Bandit y de Semgrep; por defecto 600; `0` = sin límite), `TFG_ANALYSIS_EXCLUDE_DIRS` (lista separada por comas de directorios o globs para Bandit `-x` y exclusiones Semgrep; ver experimento en `docs/03_experiments/`).
@@ -77,7 +77,7 @@ Variables útiles: `TFG_ZIP_MAX_BYTES`, `TFG_LOCAL_ANALYSIS_ROOT`, `TFG_GIT_CLON
 
 ### Estado de la capa IA (roadmap)
 
-- `GET /ai/status` — explicaciones IA (`TFG_AI_EXPLANATIONS_ENABLED`), raíz local, y timeout de análisis (`analysis_subprocess_timeout_sec`).
+- `GET /ai/status` — estado operativo: IA (`TFG_AI_EXPLANATIONS_ENABLED`), Git/local, límites de ZIP y rutas, timeouts (`analysis_subprocess_timeout_sec`), etc.
 
 ## Tests
 
