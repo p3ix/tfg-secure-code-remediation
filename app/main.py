@@ -1,4 +1,7 @@
 from pathlib import Path
+import logging
+import inspect
+from uuid import uuid4
 
 from fastapi import (
     FastAPI,
@@ -36,6 +39,7 @@ app = FastAPI(
     description="API base del TFG para análisis y remediación asistida de vulnerabilidades",
     version="0.1.0"
 )
+logger = logging.getLogger(__name__)
 
 
 _ALLOWED_ZIP_CONTENT_TYPES = {
@@ -107,8 +111,35 @@ def _map_analysis_error(exc: Exception, *, analysis_mode: str) -> tuple[int, str
     return 500, "ANALYSIS_INTERNAL_ERROR", text
 
 
-def _error_detail(error_code: str, message: str) -> dict[str, str]:
-    return {"error_code": error_code, "message": message}
+def _error_detail(error_code: str, message: str, *, analysis_id: str) -> dict[str, str]:
+    return {"error_code": error_code, "message": message, "analysis_id": analysis_id}
+
+
+def _new_analysis_id() -> str:
+    return uuid4().hex
+
+
+def _attach_analysis_id(payload: dict, analysis_id: str) -> dict:
+    out = dict(payload)
+    out["analysis_id"] = analysis_id
+    return out
+
+
+def _log_event(event: str, *, analysis_id: str, **fields: object) -> None:
+    logger.info("event=%s analysis_id=%s payload=%s", event, analysis_id, fields)
+
+
+def _call_with_optional_analysis_id(func: object, *args: object, analysis_id: str, **kwargs: object):
+    callable_obj = func
+    if not callable(callable_obj):
+        raise TypeError(f"Objeto no invocable: {callable_obj!r}")
+    try:
+        signature = inspect.signature(callable_obj)
+    except (TypeError, ValueError):
+        signature = None
+    if signature is not None and "analysis_id" in signature.parameters:
+        return callable_obj(*args, analysis_id=analysis_id, **kwargs)
+    return callable_obj(*args, **kwargs)
 
 
 def _build_dashboard_scan(
@@ -214,11 +245,15 @@ async def dashboard_analyze(
     """
     Ejecuta análisis desde la interfaz web y renderiza el resultado en la misma vista.
     """
+    analysis_id = _new_analysis_id()
+    _log_event("dashboard_analysis_start", analysis_id=analysis_id, analysis_mode=analysis_mode)
     try:
         if analysis_mode == "fixture_reports":
             internal = analyze_fixtures_reports()
         elif analysis_mode == "fixture_runtime":
-            internal = analyze_fixtures_runtime()
+            internal = _call_with_optional_analysis_id(
+                analyze_fixtures_runtime, analysis_id=analysis_id
+            )
         elif analysis_mode == "upload_zip":
             if file is None or not file.filename:
                 raise ValueError("Selecciona un fichero ZIP antes de lanzar el análisis.")
@@ -234,7 +269,9 @@ async def dashboard_analyze(
                 raise ValueError("El fichero ZIP está vacío")
             if not _looks_like_zip(content):
                 raise ValueError("El contenido subido no tiene firma ZIP válida")
-            internal = analyze_zip_bytes(content)
+            internal = _call_with_optional_analysis_id(
+                analyze_zip_bytes, content, analysis_id=analysis_id
+            )
         elif analysis_mode == "local_path":
             settings = get_settings()
             if settings.local_analysis_root is None:
@@ -243,9 +280,11 @@ async def dashboard_analyze(
                 )
             if not local_path.strip():
                 raise ValueError("Indica una ruta relativa para el modo local_path")
-            internal = analyze_local_path_relative(
+            internal = _call_with_optional_analysis_id(
+                analyze_local_path_relative,
                 local_path,
                 allowed_root=settings.local_analysis_root,
+                analysis_id=analysis_id,
             )
         elif analysis_mode == "git_clone":
             settings = get_settings()
@@ -255,9 +294,16 @@ async def dashboard_analyze(
                 )
             if not git_url.strip():
                 raise ValueError("Indica una URL HTTPS para el modo git_clone")
-            internal = clone_and_analyze_repo(git_url.strip())
+            internal = _call_with_optional_analysis_id(
+                clone_and_analyze_repo,
+                git_url.strip(),
+                analysis_id=analysis_id,
+            )
         else:
             raise ValueError(f"Modo de análisis no soportado: {analysis_mode}")
+
+        internal = _attach_analysis_id(internal, analysis_id)
+        _log_event("dashboard_analysis_done", analysis_id=analysis_id, analysis_mode=analysis_mode)
 
         scan = _build_dashboard_scan(
             internal,
@@ -273,13 +319,20 @@ async def dashboard_analyze(
         )
     except (FileNotFoundError, PermissionError, RuntimeError, ValueError, PayloadTooLargeError) as exc:
         _, code, msg = _map_analysis_error(exc, analysis_mode=analysis_mode)
+        _log_event(
+            "dashboard_analysis_error",
+            analysis_id=analysis_id,
+            analysis_mode=analysis_mode,
+            error_code=code,
+            message=msg,
+        )
         return _render_dashboard(
             request,
             scan=None,
             hide_info=hide_info,
             group_equivalent=group_equivalent,
             analysis_mode=analysis_mode,
-            analysis_error=f"[{code}] {msg}",
+            analysis_error=f"[{code}] {msg} (analysis_id={analysis_id})",
         )
 
 @app.get("/health")
@@ -311,19 +364,27 @@ async def analysis_upload_zip(
     Extrae el ZIP de forma acotada y ejecuta Bandit + Semgrep sobre el contenido.
     Límite de tamaño: variable de entorno `TFG_ZIP_MAX_BYTES` (por defecto ~20 MB).
     """
+    analysis_id = _new_analysis_id()
+    _log_event("api_upload_zip_start", analysis_id=analysis_id)
     content = await file.read()
     if not content:
         status, code, msg = _map_analysis_error(
             ValueError("No se recibió contenido ZIP en el fichero subido."),
             analysis_mode="upload_zip",
         )
-        raise HTTPException(status_code=status, detail=_error_detail(code, msg))
+        raise HTTPException(
+            status_code=status,
+            detail=_error_detail(code, msg, analysis_id=analysis_id),
+        )
     if file.filename and not file.filename.lower().endswith(".zip"):
         status, code, msg = _map_analysis_error(
             ValueError("El fichero debe tener extensión .zip"),
             analysis_mode="upload_zip",
         )
-        raise HTTPException(status_code=status, detail=_error_detail(code, msg))
+        raise HTTPException(
+            status_code=status,
+            detail=_error_detail(code, msg, analysis_id=analysis_id),
+        )
     if file.content_type and file.content_type not in _ALLOWED_ZIP_CONTENT_TYPES:
         status, code, msg = _map_analysis_error(
             ValueError(
@@ -332,18 +393,31 @@ async def analysis_upload_zip(
             ),
             analysis_mode="upload_zip",
         )
-        raise HTTPException(status_code=status, detail=_error_detail(code, msg))
+        raise HTTPException(
+            status_code=status,
+            detail=_error_detail(code, msg, analysis_id=analysis_id),
+        )
     if not _looks_like_zip(content):
         status, code, msg = _map_analysis_error(
             ValueError("El contenido subido no tiene firma ZIP válida"),
             analysis_mode="upload_zip",
         )
-        raise HTTPException(status_code=status, detail=_error_detail(code, msg))
+        raise HTTPException(
+            status_code=status,
+            detail=_error_detail(code, msg, analysis_id=analysis_id),
+        )
     try:
-        return analyze_zip_bytes(content)
+        out = _call_with_optional_analysis_id(
+            analyze_zip_bytes, content, analysis_id=analysis_id
+        )
+        _log_event("api_upload_zip_done", analysis_id=analysis_id)
+        return _attach_analysis_id(out, analysis_id)
     except (PayloadTooLargeError, ValueError, RuntimeError) as exc:
         status, code, msg = _map_analysis_error(exc, analysis_mode="upload_zip")
-        raise HTTPException(status_code=status, detail=_error_detail(code, msg)) from exc
+        raise HTTPException(
+            status_code=status,
+            detail=_error_detail(code, msg, analysis_id=analysis_id),
+        ) from exc
 
 
 @app.post("/analysis/git-clone")
@@ -353,11 +427,20 @@ def analysis_git_clone(body: GitCloneRequest) -> dict:
     Hosts permitidos: `TFG_GIT_ALLOWED_HOSTS` (por defecto github.com, gitlab.com).
     Desactivar: `TFG_ENABLE_GIT_CLONE=0`.
     """
+    analysis_id = _new_analysis_id()
+    _log_event("api_git_clone_start", analysis_id=analysis_id, url=body.url)
     try:
-        return clone_and_analyze_repo(body.url)
+        out = _call_with_optional_analysis_id(
+            clone_and_analyze_repo, body.url, analysis_id=analysis_id
+        )
+        _log_event("api_git_clone_done", analysis_id=analysis_id, url=body.url)
+        return _attach_analysis_id(out, analysis_id)
     except (PermissionError, ValueError, RuntimeError) as exc:
         status, code, msg = _map_analysis_error(exc, analysis_mode="git_clone")
-        raise HTTPException(status_code=status, detail=_error_detail(code, msg)) from exc
+        raise HTTPException(
+            status_code=status,
+            detail=_error_detail(code, msg, analysis_id=analysis_id),
+        ) from exc
 
 
 @app.post("/analysis/local-path")
@@ -366,6 +449,8 @@ def analysis_local_path(body: LocalPathRequest) -> dict:
     Analiza un directorio bajo una ruta base fijada en el servidor (`TFG_LOCAL_ANALYSIS_ROOT`).
     Solo disponible si esa variable está definida; evita rutas arbitrarias en el sistema de ficheros.
     """
+    analysis_id = _new_analysis_id()
+    _log_event("api_local_path_start", analysis_id=analysis_id, relative_path=body.relative_path)
     s = get_settings()
     if s.local_analysis_root is None:
         status, code, msg = _map_analysis_error(
@@ -375,14 +460,25 @@ def analysis_local_path(body: LocalPathRequest) -> dict:
             ),
             analysis_mode="local_path",
         )
-        raise HTTPException(status_code=status, detail=_error_detail(code, msg))
-    try:
-        return analyze_local_path_relative(
-            body.relative_path, allowed_root=s.local_analysis_root
+        raise HTTPException(
+            status_code=status,
+            detail=_error_detail(code, msg, analysis_id=analysis_id),
         )
+    try:
+        out = _call_with_optional_analysis_id(
+            analyze_local_path_relative,
+            body.relative_path,
+            allowed_root=s.local_analysis_root,
+            analysis_id=analysis_id,
+        )
+        _log_event("api_local_path_done", analysis_id=analysis_id)
+        return _attach_analysis_id(out, analysis_id)
     except (ValueError, FileNotFoundError, RuntimeError) as exc:
         status, code, msg = _map_analysis_error(exc, analysis_mode="local_path")
-        raise HTTPException(status_code=status, detail=_error_detail(code, msg)) from exc
+        raise HTTPException(
+            status_code=status,
+            detail=_error_detail(code, msg, analysis_id=analysis_id),
+        ) from exc
 
 
 @app.get("/ai/status")
@@ -404,8 +500,10 @@ def ai_status() -> dict:
 
 @app.get("/analysis/fixtures")
 def analyze_fixtures() -> dict:
+    analysis_id = _new_analysis_id()
     try:
-        return analyze_fixtures_reports()
+        out = analyze_fixtures_reports()
+        return _attach_analysis_id(out, analysis_id)
     except FileNotFoundError as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
@@ -422,9 +520,10 @@ def analyze_fixtures_presentable(
     ),
 ) -> dict:
     """Vista JSON orientada a presentación (sin datos crudos de herramienta)."""
+    analysis_id = _new_analysis_id()
     try:
         scan = presentable_from_internal_analysis(
-            analyze_fixtures_reports(),
+            _attach_analysis_id(analyze_fixtures_reports(), analysis_id),
             group_equivalent=group_equivalent,
         )
         return filter_presentable_scan(scan, hide_info=hide_info)
@@ -434,8 +533,12 @@ def analyze_fixtures_presentable(
 
 @app.post("/analysis/run-fixtures")
 def run_fixtures_analysis() -> dict:
+    analysis_id = _new_analysis_id()
     try:
-        return analyze_fixtures_runtime()
+        out = _call_with_optional_analysis_id(
+            analyze_fixtures_runtime, analysis_id=analysis_id
+        )
+        return _attach_analysis_id(out, analysis_id)
     except (FileNotFoundError, RuntimeError) as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
@@ -452,9 +555,15 @@ def run_fixtures_analysis_presentable(
     ),
 ) -> dict:
     """Mismo escaneo que /analysis/run-fixtures, respuesta presentable."""
+    analysis_id = _new_analysis_id()
     try:
         scan = presentable_from_internal_analysis(
-            analyze_fixtures_runtime(),
+            _attach_analysis_id(
+                _call_with_optional_analysis_id(
+                    analyze_fixtures_runtime, analysis_id=analysis_id
+                ),
+                analysis_id,
+            ),
             group_equivalent=group_equivalent,
         )
         return filter_presentable_scan(scan, hide_info=hide_info)

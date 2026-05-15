@@ -308,6 +308,8 @@ def test_analysis_upload_zip_success(monkeypatch) -> None:
     assert r.status_code == 200
     body = r.json()
     assert body["analysis_target"] == "upload.zip"
+    assert isinstance(body["analysis_id"], str)
+    assert body["analysis_id"]
 
 
 def test_analysis_upload_zip_bad_request(monkeypatch) -> None:
@@ -402,9 +404,10 @@ def test_api_error_contract_has_code_and_message() -> None:
     )
     assert r.status_code == 400
     detail = r.json()["detail"]
-    assert set(detail.keys()) == {"error_code", "message"}
+    assert set(detail.keys()) == {"error_code", "message", "analysis_id"}
     assert isinstance(detail["error_code"], str)
     assert isinstance(detail["message"], str)
+    assert isinstance(detail["analysis_id"], str)
 
 
 def test_analysis_upload_zip_payload_too_large(monkeypatch) -> None:
@@ -437,7 +440,9 @@ def test_analysis_git_clone_success(monkeypatch) -> None:
     )
 
     assert r.status_code == 200
-    assert r.json()["analysis_target"].startswith("git:https://")
+    body = r.json()
+    assert body["analysis_target"].startswith("git:https://")
+    assert isinstance(body["analysis_id"], str)
 
 
 def test_analysis_git_clone_bad_request(monkeypatch) -> None:
@@ -606,7 +611,9 @@ def test_local_path_with_root_success(monkeypatch, tmp_path) -> None:
         client = TestClient(app)
         r = client.post("/analysis/local-path", json={"relative_path": "proj"})
         assert r.status_code == 200
-        assert r.json()["analysis_target"] == "local:proj"
+        body = r.json()
+        assert body["analysis_target"] == "local:proj"
+        assert isinstance(body["analysis_id"], str)
     finally:
         get_settings.cache_clear()
 

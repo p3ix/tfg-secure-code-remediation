@@ -698,6 +698,9 @@
           <div class="pill-row">
             <span class="pill">Objetivo: <code>{{ scan.meta.analysis_target }}</code></span>
             <span class="pill">Modo: <code>{{ scan.meta.execution_mode }}</code></span>
+            {% if scan.meta.analysis_id %}
+            <span class="pill">Analysis ID: <code>{{ scan.meta.analysis_id }}</code></span>
+            {% endif %}
             <span class="pill">Generado: {{ scan.meta.generated_at }}</span>
           </div>
         </div>

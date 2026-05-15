@@ -107,6 +107,7 @@ def build_presentable_scan(
     *,
     analysis_target: str,
     execution_mode: str,
+    analysis_id: str | None = None,
     reports: dict[str, str] | None = None,
     group_equivalent: bool = False,
 ) -> dict[str, Any]:
@@ -144,6 +145,7 @@ def build_presentable_scan(
         "meta": {
             "analysis_target": analysis_target,
             "execution_mode": execution_mode,
+            "analysis_id": analysis_id,
             "generated_at": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
             "note": (
                 "Vista presentable del escaneo para el TFG. "
@@ -207,6 +209,7 @@ def presentable_from_internal_analysis(
         findings,
         analysis_target=str(internal.get("analysis_target", "")),
         execution_mode=execution_mode,
+        analysis_id=internal.get("analysis_id"),
         reports=reports,
         group_equivalent=group_equivalent,
     )
