@@ -607,6 +607,8 @@
               <small>
                 {% if local_path_enabled %}
                 Disponible bajo <code>{{ local_analysis_root }}</code>.
+                {% elif not enable_local_path %}
+                Desactivado por configuración (<code>TFG_ENABLE_LOCAL_PATH=0</code>).
                 {% else %}
                 Desactivado hasta configurar <code>TFG_LOCAL_ANALYSIS_ROOT</code>.
                 {% endif %}

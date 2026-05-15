@@ -43,3 +43,16 @@ def test_settings_rejects_invalid_allowed_hosts(monkeypatch: pytest.MonkeyPatch)
             Settings()
     finally:
         get_settings.cache_clear()
+
+
+def test_settings_zip_and_path_limits_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("TFG_ZIP_MAX_ENTRIES", raising=False)
+    monkeypatch.delenv("TFG_ENABLE_LOCAL_PATH", raising=False)
+    get_settings.cache_clear()
+    try:
+        s = Settings()
+        assert s.zip_max_entries == 10_000
+        assert s.enable_local_path is True
+        assert s.git_url_max_length == 2048
+    finally:
+        get_settings.cache_clear()

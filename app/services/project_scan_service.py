@@ -100,6 +100,12 @@ def _validate_analysis_tree_size(
 
 
 def _validate_https_git_url(url: str, allowed_hosts: frozenset[str]) -> None:
+    settings = get_settings()
+    if len(url) > settings.git_url_max_length:
+        raise ValueError(
+            f"URL demasiado larga (máx. {settings.git_url_max_length} caracteres). "
+            "Ajustar TFG_GIT_URL_MAX_LENGTH si es necesario."
+        )
     parsed = urlparse(url)
     if parsed.scheme != "https":
         raise ValueError("La URL del repositorio debe usar https://")
@@ -272,6 +278,14 @@ def resolve_allowed_analysis_path(relative_path: str, allowed_root: Path) -> Pat
         raise ValueError("El directorio raíz permitido no existe o no es un directorio válido")
     if not relative_path or relative_path.strip() != relative_path:
         raise ValueError("Ruta relativa inválida")
+    settings = get_settings()
+    if len(relative_path) > settings.local_path_max_length:
+        raise ValueError(
+            f"Ruta relativa demasiado larga (máx. {settings.local_path_max_length} caracteres). "
+            "Ajustar TFG_LOCAL_PATH_MAX_LENGTH si es necesario."
+        )
+    if any(ord(c) < 32 for c in relative_path):
+        raise ValueError("La ruta relativa no puede contener caracteres de control")
     if "\\" in relative_path:
         raise ValueError("La ruta relativa no puede contener separadores '\\'")
     p = Path(relative_path)
@@ -313,12 +327,20 @@ def analyze_zip_bytes(zip_bytes: bytes, *, analysis_id: str | None = None) -> di
             f"ZIP demasiado grande (máx. {settings.zip_max_bytes} bytes). "
             "Ajustar TFG_ZIP_MAX_BYTES si es necesario."
         )
-    max_uncompressed = min(settings.zip_max_bytes * 5, 100 * 1024 * 1024)
+    max_uncompressed = min(
+        settings.zip_max_bytes * 5,
+        settings.zip_max_uncompressed_bytes,
+    )
     with tempfile.TemporaryDirectory(prefix="tfg-unzip-") as td:
         dest = Path(td) / "src"
         dest.mkdir(parents=True)
         _log_stage("zip_extract_start", analysis_id=analysis_id)
-        extract_zip_safely(zip_bytes, dest, max_uncompressed_bytes=max_uncompressed)
+        extract_zip_safely(
+            zip_bytes,
+            dest,
+            max_uncompressed_bytes=max_uncompressed,
+            max_entries=settings.zip_max_entries,
+        )
         _log_stage("zip_extract_done", analysis_id=analysis_id)
         label = "upload.zip (contenido extraído)"
         return _call_analyze_directory(

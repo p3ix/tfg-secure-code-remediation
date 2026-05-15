@@ -83,14 +83,20 @@ def _map_analysis_error(exc: Exception, *, analysis_mode: str) -> tuple[int, str
             return 400, "ZIP_CONTENT_TYPE_INVALID", text
         if "No se recibió contenido ZIP" in text or "ZIP está vacío" in text:
             return 400, "ZIP_EMPTY_CONTENT", text
+        if "demasiadas entradas" in text:
+            return 400, "ZIP_TOO_MANY_ENTRIES", text
+        if "Contenido descomprimido supera" in text:
+            return 400, "ZIP_DECOMPRESSED_TOO_LARGE", text
         if "URL HTTPS" in text and analysis_mode == "git_clone":
             return 400, "GIT_URL_REQUIRED", text
+        if "URL demasiado larga" in text:
+            return 400, "GIT_URL_INVALID", text
         if "Host no permitido" in text:
             return 400, "GIT_HOST_NOT_ALLOWED", text
-        if "https://" in text:
-            return 400, "GIT_URL_INVALID", text
         if analysis_mode == "local_path":
             return 400, "LOCAL_PATH_INVALID", text
+        if "https://" in text:
+            return 400, "GIT_URL_INVALID", text
         if "Modo de análisis no soportado" in text:
             return 400, "ANALYSIS_MODE_UNSUPPORTED", text
         return 400, "ANALYSIS_BAD_REQUEST", text
@@ -177,7 +183,9 @@ def _render_dashboard(
             "analysis_mode": analysis_mode,
             "analysis_error": analysis_error,
             "analysis_notice": analysis_notice,
-            "local_path_enabled": settings.local_analysis_root is not None,
+            "local_path_enabled": settings.enable_local_path
+            and settings.local_analysis_root is not None,
+            "enable_local_path": settings.enable_local_path,
             "local_analysis_root": str(settings.local_analysis_root)
             if settings.local_analysis_root is not None
             else None,
@@ -274,6 +282,11 @@ async def dashboard_analyze(
             )
         elif analysis_mode == "local_path":
             settings = get_settings()
+            if not settings.enable_local_path:
+                raise PermissionError(
+                    "Análisis por ruta local desactivado (TFG_ENABLE_LOCAL_PATH=0). "
+                    "Activar solo en entornos controlados."
+                )
             if settings.local_analysis_root is None:
                 raise PermissionError(
                     "El análisis por ruta local está desactivado en este entorno."
@@ -344,6 +357,7 @@ class GitCloneRequest(BaseModel):
     url: str = Field(
         ...,
         min_length=12,
+        max_length=8192,
         description="URL https:// del repositorio Git (p. ej. GitHub/GitLab público).",
     )
 
@@ -352,6 +366,7 @@ class LocalPathRequest(BaseModel):
     relative_path: str = Field(
         ...,
         min_length=1,
+        max_length=8192,
         description="Ruta relativa dentro de TFG_LOCAL_ANALYSIS_ROOT (sin ..).",
     )
 
@@ -452,6 +467,18 @@ def analysis_local_path(body: LocalPathRequest) -> dict:
     analysis_id = _new_analysis_id()
     _log_event("api_local_path_start", analysis_id=analysis_id, relative_path=body.relative_path)
     s = get_settings()
+    if not s.enable_local_path:
+        status, code, msg = _map_analysis_error(
+            PermissionError(
+                "Análisis por ruta local desactivado (TFG_ENABLE_LOCAL_PATH=0). "
+                "Activar solo en entornos controlados."
+            ),
+            analysis_mode="local_path",
+        )
+        raise HTTPException(
+            status_code=status,
+            detail=_error_detail(code, msg, analysis_id=analysis_id),
+        )
     if s.local_analysis_root is None:
         status, code, msg = _map_analysis_error(
             PermissionError(
@@ -489,6 +516,13 @@ def ai_status() -> dict:
         "ai_explanations_enabled": s.ai_explanations_enabled,
         "git_clone_enabled": s.enable_git_clone,
         "local_analysis_root_configured": s.local_analysis_root is not None,
+        "local_path_enabled": s.enable_local_path and s.local_analysis_root is not None,
+        "enable_local_path": s.enable_local_path,
+        "zip_max_bytes": s.zip_max_bytes,
+        "zip_max_entries": s.zip_max_entries,
+        "zip_max_uncompressed_bytes": s.zip_max_uncompressed_bytes,
+        "git_url_max_length": s.git_url_max_length,
+        "local_path_max_length": s.local_path_max_length,
         "analysis_subprocess_timeout_sec": s.analysis_subprocess_timeout_sec,
         "analysis_exclude_patterns_count": len(s.analysis_exclude_patterns),
         "message": (
