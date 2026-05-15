@@ -6,7 +6,7 @@ Aplicación web para análisis y remediación asistida por IA de vulnerabilidade
 
 El **MVP** sobre `fixtures/mvp/` está operativo: detección con Bandit y Semgrep, modelo normalizado de hallazgos, clasificación CWE/OWASP/ASVS, remediación asistida con verificación en patrones acotados, pipeline, dashboard y JSON presentable (incl. agrupación opcional `group_equivalent`).
 
-En **ampliación**: análisis de **proyectos reales** (subida ZIP, ruta local bajo directorio permitido, clonado Git HTTPS acotado), capa **IA** opcional documentada en [`docs/02_decisions/ADR-002-ai-assisted-roadmap.md`](docs/02_decisions/ADR-002-ai-assisted-roadmap.md).
+En **ampliación**: análisis de **proyectos reales** (subida ZIP, ruta local bajo directorio permitido, clonado Git HTTPS acotado) operativo desde **web y API**; hito documentado en [`docs/04_delivery/release-web-operativa-sin-ia.md`](docs/04_delivery/release-web-operativa-sin-ia.md). La capa **IA** es opcional y queda para la fase siguiente ([`docs/02_decisions/ADR-002-ai-assisted-roadmap.md`](docs/02_decisions/ADR-002-ai-assisted-roadmap.md)).
 
 ## Documentación clave
 
@@ -16,6 +16,7 @@ En **ampliación**: análisis de **proyectos reales** (subida ZIP, ruta local ba
 | [`docs/01_roadmap_and_documentation_ritual.md`](docs/01_roadmap_and_documentation_ritual.md) | Hoja de ruta, ritual issues/docs, cadencia memoria |
 | [`docs/01_architecture_overview.md`](docs/01_architecture_overview.md) | Arquitectura |
 | [`docs/04_delivery/manual-usuario-web.md`](docs/04_delivery/manual-usuario-web.md) | Manual de usuario de la consola web (`/dashboard`) |
+| [`docs/04_delivery/release-web-operativa-sin-ia.md`](docs/04_delivery/release-web-operativa-sin-ia.md) | Hito: web operativa sin IA (checklist y verificación) |
 | [`docs/03_experiments/dashboard-web-analysis-console.md`](docs/03_experiments/dashboard-web-analysis-console.md) | Evolución de la interfaz web de análisis |
 | [`docs/06_references/README.md`](docs/06_references/README.md) | Referencias [REF-xxx] |
 
