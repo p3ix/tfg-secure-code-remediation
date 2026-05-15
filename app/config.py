@@ -113,3 +113,28 @@ class Settings:
             "TFG_ANALYSIS_EXCLUDE_DIRS",
             _DEFAULT_ANALYSIS_EXCLUDE_DIRS,
         )
+        # ZIP: número máximo de entradas en el índice (anti zip bomb / abuso).
+        self.zip_max_entries: int = _parse_int_env(
+            "TFG_ZIP_MAX_ENTRIES",
+            10_000,
+            minimum=1,
+        )
+        # Tope de bytes al descomprimir (además de min(zip_max_bytes * 5, este valor)).
+        self.zip_max_uncompressed_bytes: int = _parse_int_env(
+            "TFG_ZIP_MAX_UNCOMPRESSED_BYTES",
+            100 * 1024 * 1024,
+            minimum=1024,
+        )
+        # Git: longitud máxima de URL (evita payloads enormes en logs/subproceso).
+        self.git_url_max_length: int = _parse_int_env(
+            "TFG_GIT_URL_MAX_LENGTH",
+            2048,
+            minimum=12,
+        )
+        # Ruta relativa local: longitud y flag de kill-switch.
+        self.local_path_max_length: int = _parse_int_env(
+            "TFG_LOCAL_PATH_MAX_LENGTH",
+            4096,
+            minimum=1,
+        )
+        self.enable_local_path: bool = _parse_bool_env("TFG_ENABLE_LOCAL_PATH", True)

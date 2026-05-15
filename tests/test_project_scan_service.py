@@ -68,6 +68,18 @@ def test_validate_https_git_url_rejects_short_path() -> None:
         )
 
 
+def test_validate_https_git_url_rejects_excessive_length(monkeypatch) -> None:
+    monkeypatch.setenv("TFG_GIT_URL_MAX_LENGTH", "40")
+    get_settings.cache_clear()
+    try:
+        long_url = "https://github.com/" + ("x" * 50) + "/a/b.git"
+        assert len(long_url) > 40
+        with pytest.raises(ValueError, match="demasiado larga"):
+            _validate_https_git_url(long_url, frozenset({"github.com"}))
+    finally:
+        get_settings.cache_clear()
+
+
 def test_zip_path_traversal_rejected() -> None:
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
@@ -96,6 +108,22 @@ def test_extract_zip_safely_rejects_too_many_entries(tmp_path) -> None:
             max_uncompressed_bytes=1024,
             max_entries=1,
         )
+
+
+def test_analyze_zip_bytes_respects_tfg_zip_max_entries(monkeypatch) -> None:
+    monkeypatch.setenv("TFG_ZIP_MAX_ENTRIES", "1")
+    get_settings.cache_clear()
+    try:
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+            zf.writestr("a.txt", b"x")
+            zf.writestr("b.txt", b"y")
+        from app.services.project_scan_service import analyze_zip_bytes
+
+        with pytest.raises(ValueError, match="demasiadas entradas"):
+            analyze_zip_bytes(buf.getvalue())
+    finally:
+        get_settings.cache_clear()
 
 
 def test_analyze_directory_rejects_non_directory(tmp_path) -> None:
@@ -235,6 +263,12 @@ def test_ai_status_endpoint() -> None:
     data = r.json()
     assert "ai_explanations_enabled" in data
     assert "local_analysis_root_configured" in data
+    assert "enable_local_path" in data
+    assert "local_path_enabled" in data
+    assert "zip_max_entries" in data
+    assert "zip_max_uncompressed_bytes" in data
+    assert "git_url_max_length" in data
+    assert "local_path_max_length" in data
     assert "analysis_subprocess_timeout_sec" in data
     assert "analysis_exclude_patterns_count" in data
     assert "documentation" in data
@@ -288,6 +322,21 @@ def test_local_path_forbidden_without_env(monkeypatch) -> None:
         client = TestClient(app)
         r = client.post("/analysis/local-path", json={"relative_path": "x"})
         assert r.status_code == 403
+    finally:
+        get_settings.cache_clear()
+
+
+def test_local_path_forbidden_when_disabled(monkeypatch, tmp_path) -> None:
+    root = tmp_path / "allow-root"
+    root.mkdir()
+    monkeypatch.setenv("TFG_LOCAL_ANALYSIS_ROOT", str(root))
+    monkeypatch.setenv("TFG_ENABLE_LOCAL_PATH", "0")
+    get_settings.cache_clear()
+    try:
+        client = TestClient(app)
+        r = client.post("/analysis/local-path", json={"relative_path": "proj"})
+        assert r.status_code == 403
+        assert "TFG_ENABLE_LOCAL_PATH" in r.json()["detail"]["message"]
     finally:
         get_settings.cache_clear()
 
