@@ -12,6 +12,8 @@ from app.config import get_settings
 from app.main import app
 from app.services.project_scan_service import (
     PayloadTooLargeError,
+    _presentable_file_path,
+    _relativize_findings_paths,
     _validate_https_git_url,
     analyze_directory,
     analyze_local_path_relative,
@@ -19,6 +21,119 @@ from app.services.project_scan_service import (
     extract_zip_safely,
     resolve_allowed_analysis_path,
 )
+
+
+def test_presentable_file_path_relativizes_under_root(tmp_path) -> None:
+    root = tmp_path / "project"
+    nested = root / "src" / "test.py"
+    nested.parent.mkdir(parents=True)
+    nested.write_text("x", encoding="utf-8")
+    assert _presentable_file_path(str(nested.resolve()), root) == "src/test.py"
+
+
+def test_presentable_file_path_keeps_already_relative() -> None:
+    assert _presentable_file_path("src/app.py", Path("/tmp/ignored")) == "src/app.py"
+
+
+def test_presentable_file_path_keeps_path_outside_root(tmp_path) -> None:
+    root = tmp_path / "project"
+    root.mkdir()
+    outside = tmp_path / "outside.py"
+    outside.write_text("x", encoding="utf-8")
+    assert _presentable_file_path(str(outside.resolve()), root) == str(outside.resolve()).replace(
+        "\\", "/"
+    )
+
+
+def test_relativize_findings_paths_updates_in_place(tmp_path) -> None:
+    from app.models.finding import NormalizedFinding
+
+    root = tmp_path / "proj"
+    file_path = root / "a.py"
+    file_path.parent.mkdir()
+    file_path.write_text("x", encoding="utf-8")
+    finding = NormalizedFinding(
+        source_tool="bandit",
+        source_rule_id="B602",
+        file_path=str(file_path.resolve()),
+        line_start=1,
+        raw_message="test",
+        severity="low",
+        mvp_category="command_injection",
+        candidate_for_remediation=True,
+        remediation_mode="autofix_candidate",
+    )
+    _relativize_findings_paths([finding], root)
+    assert finding.file_path == "a.py"
+
+
+def test_analyze_directory_relativizes_finding_paths(monkeypatch, tmp_path) -> None:
+    from app.models.finding import NormalizedFinding
+
+    target = tmp_path / "target"
+    nested = target / "src" / "test.py"
+    nested.parent.mkdir(parents=True)
+    nested.write_text("x", encoding="utf-8")
+
+    abs_path = str(nested.resolve())
+
+    def fake_load(*, bandit_report_path, semgrep_report_path):
+        return [
+            NormalizedFinding(
+                source_tool="bandit",
+                source_rule_id="B602",
+                file_path=abs_path,
+                line_start=2,
+                raw_message="shell=True",
+                severity="low",
+                mvp_category="command_injection",
+                candidate_for_remediation=True,
+                remediation_mode="autofix_candidate",
+            )
+        ]
+
+    def fake_enrich(findings):
+        return findings
+
+    class _FixedTmpDir:
+        def __init__(self, path: Path):
+            self.path = path
+
+        def __enter__(self):
+            return str(self.path)
+
+        def __exit__(self, *args):
+            return False
+
+    monkeypatch.setattr(
+        "app.services.project_scan_service.tempfile.TemporaryDirectory",
+        lambda **kwargs: _FixedTmpDir(tmp_path / "reports"),
+    )
+    monkeypatch.setattr("app.services.project_scan_service.load_all_findings", fake_load)
+    monkeypatch.setattr(
+        "app.services.project_scan_service.enrich_findings_with_classification",
+        fake_enrich,
+    )
+    monkeypatch.setattr(
+        "app.services.project_scan_service.run_analysis_command",
+        lambda cmd: type("R", (), {"returncode": 0, "stderr": ""})(),
+    )
+    monkeypatch.setattr(
+        "app.services.project_scan_service.build_bandit_command",
+        lambda target, out: ["bandit"],
+    )
+    monkeypatch.setattr(
+        "app.services.project_scan_service.build_semgrep_command",
+        lambda target, out: ["semgrep"],
+    )
+
+    reports_dir = tmp_path / "reports"
+    reports_dir.mkdir()
+    (reports_dir / "bandit.json").write_text("{}", encoding="utf-8")
+    (reports_dir / "semgrep.json").write_text("{}", encoding="utf-8")
+
+    out = analyze_directory(target, analysis_target_label="local:test")
+    assert out["findings"][0]["file_path"] == "src/test.py"
 
 
 def test_validate_https_git_url_allows_github() -> None:
