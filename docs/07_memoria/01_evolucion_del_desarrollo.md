@@ -112,6 +112,12 @@ Tras probar ZIPs reales con `subprocess`, dos reglas frecuentes de Bandit seguí
 
 ---
 
+## 12. Diagnóstico de herramientas en el dashboard
+
+En escaneos runtime, a veces solo Bandit aportaba filas y Semgrep no, lo que podía interpretarse como un fallo. Se expone en la vista web un panel **Diagnóstico Bandit / Semgrep** derivado de `tool_runs`: código de salida, hallazgos por herramienta y vista previa de stderr. El dato viaja en `scan.meta.tool_diagnostics` del JSON presentable. Documentación: [`docs/04_delivery/diagnostico-herramientas-dashboard.md`](../04_delivery/diagnostico-herramientas-dashboard.md).
+
+---
+
 ## Referencias cruzadas en el repositorio
 
 Para no duplicar contenido técnico, este capítulo se apoya en documentos ya existentes, entre otros:

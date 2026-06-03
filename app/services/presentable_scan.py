@@ -25,6 +25,53 @@ SEVERITY_LABELS: dict[str, str] = {
     "unknown": "Desconocida",
 }
 
+_TOOL_ORDER = ("bandit", "semgrep")
+
+
+def _tool_run_status(returncode: int | None) -> tuple[str, str]:
+    if returncode is None:
+        return "unknown", "Desconocido"
+    if returncode == 0:
+        return "ok", "Completado (sin issues reportados)"
+    if returncode == 1:
+        return "completed_with_findings", "Completado (con hallazgos)"
+    return "error", f"Finalizó con código {returncode}"
+
+
+def build_tool_diagnostics(
+    tool_runs: dict[str, Any],
+    findings: list[NormalizedFinding],
+) -> list[dict[str, Any]]:
+    """
+    Resume ejecución de Bandit/Semgrep para la vista presentable (dashboard/API).
+    """
+    from collections import Counter
+
+    by_tool = Counter(f.source_tool for f in findings)
+    diagnostics: list[dict[str, Any]] = []
+    for tool in _TOOL_ORDER:
+        run = tool_runs.get(tool)
+        if not isinstance(run, dict):
+            continue
+        returncode = run.get("returncode")
+        rc_int = returncode if isinstance(returncode, int) else None
+        status_key, status_label = _tool_run_status(rc_int)
+        findings_count = by_tool.get(tool, 0)
+        entry: dict[str, Any] = {
+            "tool": tool,
+            "returncode": returncode,
+            "status": status_key,
+            "status_label": status_label,
+            "findings_count": findings_count,
+        }
+        if findings_count == 0 and status_key in {"ok", "completed_with_findings"}:
+            entry["note"] = "La herramienta terminó pero no aportó hallazgos en esta ejecución."
+        stderr_preview = run.get("stderr_preview")
+        if isinstance(stderr_preview, str) and stderr_preview.strip():
+            entry["stderr_preview"] = stderr_preview.strip()
+        diagnostics.append(entry)
+    return diagnostics
+
 
 def _finding_to_presentable_row(index: int, f: NormalizedFinding) -> dict[str, Any]:
     title = f.title or f.mvp_category.replace("_", " ").title()
@@ -216,6 +263,11 @@ def presentable_from_internal_analysis(
     if invalid_findings:
         out_meta = dict(out.get("meta") or {})
         out_meta["invalid_findings_skipped"] = invalid_findings
+        out["meta"] = out_meta
+    tool_runs = internal.get("tool_runs")
+    if isinstance(tool_runs, dict) and tool_runs:
+        out_meta = dict(out.get("meta") or {})
+        out_meta["tool_diagnostics"] = build_tool_diagnostics(tool_runs, findings)
         out["meta"] = out_meta
     return out
 
