@@ -35,8 +35,12 @@ def infer_mvp_category_from_bandit_result(result: dict[str, Any]) -> str:
         return "command_injection"
 
     # B404: import subprocess — informativo; categoría propia para no mezclar con B602/B605 en verificación
-    if test_id == "B404" and "command_injection" in file_path.replace("\\", "/"):
+    if test_id == "B404":
         return "subprocess_import_info"
+
+    # B607: ejecutable con ruta parcial — aviso contextual de subprocess (informativo)
+    if test_id == "B607":
+        return "subprocess_partial_path_info"
 
     if test_id == "B506" or "yaml" in message:
         return "unsafe_yaml_load"
@@ -60,7 +64,7 @@ def infer_remediation_mode(mvp_category: str) -> str:
     if mvp_category == "sql_injection":
         return "proposal_only"
 
-    if mvp_category == "subprocess_import_info":
+    if mvp_category in {"subprocess_import_info", "subprocess_partial_path_info"}:
         return "detection_only"
 
     if mvp_category in {
@@ -79,6 +83,7 @@ def build_title(mvp_category: str) -> str:
     titles = {
         "command_injection": "Posible command injection",
         "subprocess_import_info": "Importación de subprocess (aviso informativo)",
+        "subprocess_partial_path_info": "Ejecutable con ruta parcial (aviso informativo)",
         "unsafe_yaml_load": "Uso inseguro de yaml.load",
         "verify_false": "Desactivación de verificación TLS",
         "missing_timeout": "Petición HTTP sin timeout",

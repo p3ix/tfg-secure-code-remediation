@@ -59,6 +59,21 @@ def test_subprocess_import_info_mapping() -> None:
     assert enriched.owasp_top10 == "A05:2025 - Injection"
 
 
+def test_subprocess_partial_path_info_mapping() -> None:
+    from dataclasses import replace
+
+    finding = replace(
+        build_base_finding("subprocess_partial_path_info"),
+        remediation_mode="detection_only",
+        candidate_for_remediation=False,
+    )
+
+    enriched = enrich_finding_with_classification(finding)
+
+    assert enriched.cwe_id == 78
+    assert enriched.owasp_top10 == "A05:2025 - Injection"
+
+
 def test_sql_injection_mapping() -> None:
     finding = build_base_finding("sql_injection")
 

@@ -10,11 +10,13 @@ Los endpoints presentables y el `/dashboard` admiten **`group_equivalent=true`**
 
 ## Bandit B404 (import de `subprocess`)
 
-La regla **B404** avisa de que se importa el módulo `subprocess`. En el corpus MVP de `command_injection` ese aviso es **contextual**: no es el mismo problema que `shell=True` (B602), pero ayuda a entender el archivo. El parser usa la categoría propia **`subprocess_import_info`** cuando la ruta está bajo `command_injection/`, con:
+La regla **B404** avisa de que se importa el módulo `subprocess`. Ese aviso es **contextual**: no es el mismo problema que `shell=True` (B602), pero ayuda a entender el archivo. El parser asigna la categoría **`subprocess_import_info`** para cualquier ruta (fixtures o proyectos reales), con:
 
 - `remediation_mode`: `detection_only` (sin autofix para ese aviso),
 - mismo marco CWE/OWASP que inyección de comandos en el mapper, por contexto educativo,
 - título descriptivo en lugar de “Hallazgo de seguridad” genérico.
+
+La regla **B607** (ejecutable con ruta parcial) se mapea a **`subprocess_partial_path_info`**, también informativa y `detection_only`.
 
 Así desaparece `unknown` y el verificador de remediación autofix sigue comprobando solo `command_injection` (B602/B605, etc.), sin contar B404 tras el parche.
 

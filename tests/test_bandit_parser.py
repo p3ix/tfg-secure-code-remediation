@@ -63,6 +63,49 @@ def test_parse_bandit_result_b404_in_command_injection_fixture() -> None:
     assert "subprocess" in finding.title.lower() or "informativo" in finding.title.lower()
 
 
+def test_parse_bandit_result_b404_in_real_project_path() -> None:
+    result = {
+        "filename": "/tmp/tfg-unzip-abc/src/test/test.py",
+        "test_id": "B404",
+        "test_name": "blacklist",
+        "issue_severity": "LOW",
+        "issue_confidence": "HIGH",
+        "issue_text": "Consider possible security implications associated with the subprocess module.",
+        "line_number": 1,
+        "line_range": [1],
+        "code": "import subprocess",
+        "more_info": "https://bandit.readthedocs.io/",
+        "issue_cwe": {"id": 78, "link": "https://cwe.mitre.org/data/definitions/78.html"},
+    }
+
+    finding = parse_bandit_result(result)
+
+    assert finding.mvp_category == "subprocess_import_info"
+    assert finding.remediation_mode == "detection_only"
+
+
+def test_parse_bandit_result_b607_maps_to_partial_path_info() -> None:
+    result = {
+        "filename": "src/test/test.py",
+        "test_id": "B607",
+        "test_name": "start_process_with_partial_path",
+        "issue_severity": "LOW",
+        "issue_confidence": "HIGH",
+        "issue_text": "Starting a process with a partial executable path",
+        "line_number": 2,
+        "line_range": [2],
+        "code": 'subprocess.call("ls", shell=True)',
+        "more_info": "https://bandit.readthedocs.io/",
+        "issue_cwe": {"id": 78, "link": "https://cwe.mitre.org/data/definitions/78.html"},
+    }
+
+    finding = parse_bandit_result(result)
+
+    assert finding.mvp_category == "subprocess_partial_path_info"
+    assert finding.remediation_mode == "detection_only"
+    assert "ruta parcial" in finding.title.lower()
+
+
 def test_parse_single_bandit_result_sql_injection() -> None:
     result = {
         "filename": "fixtures/mvp/sql_injection/vuln_sql_injection.py",

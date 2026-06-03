@@ -106,6 +106,12 @@ En pruebas reales con ZIP se observó que Bandit reportaba rutas absolutas del d
 
 ---
 
+## 11. Categorías MVP en proyectos reales (Bandit B404/B607)
+
+Tras probar ZIPs reales con `subprocess`, dos reglas frecuentes de Bandit seguían clasificándose como `unknown` porque el mapeo de **B404** dependía de la ruta del fixture `command_injection/`. Se generalizó el criterio: **B404** → `subprocess_import_info` y **B607** → `subprocess_partial_path_info`, ambas informativas (`detection_only`), con títulos y CWE/OWASP en el mapper. Así el resumen del dashboard refleja mejor el contexto sin perder la trazabilidad de la regla Bandit. Detalle: [`docs/04_delivery/mapeo-categorias-mvp-bandit.md`](../04_delivery/mapeo-categorias-mvp-bandit.md).
+
+---
+
 ## Referencias cruzadas en el repositorio
 
 Para no duplicar contenido técnico, este capítulo se apoya en documentos ya existentes, entre otros:
