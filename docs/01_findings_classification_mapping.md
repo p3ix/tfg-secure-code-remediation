@@ -12,7 +12,8 @@ He decidido utilizar un criterio simple y determinista basado en `mvp_category`.
 
 La razón es que, en esta fase del proyecto, ya existe una categorización funcional suficientemente estable para los casos del MVP:
 - `command_injection`
-- `subprocess_import_info` (Bandit B404 en fixtures de command injection; informativo)
+- `subprocess_import_info` (Bandit B404; informativo, cualquier ruta)
+- `subprocess_partial_path_info` (Bandit B607; informativo)
 - `unsafe_yaml_load`
 - `verify_false`
 - `missing_timeout`
@@ -32,6 +33,7 @@ Por este motivo:
 |---|---|---|---|---|
 | `command_injection` | CWE-78 | A05:2025 Injection | ASVS v5.0.0 V1.2 Injection Prevention | Fuerte |
 | `subprocess_import_info` | CWE-78 | A05:2025 Injection | ASVS v5.0.0 V1.2 Injection Prevention | Contexto (aviso B404) |
+| `subprocess_partial_path_info` | CWE-78 | A05:2025 Injection | ASVS v5.0.0 V1.2 Injection Prevention | Contexto (aviso B607) |
 | `unsafe_yaml_load` | CWE-502 | A08:2025 Software or Data Integrity Failures | ASVS v5.0.0 V1.5 Safe Deserialization | Fuerte |
 | `verify_false` | CWE-295 | A04:2025 Cryptographic Failures | ASVS v5.0.0 V12.2 HTTPS Communication with External Facing Services | Fuerte |
 | `missing_timeout` | CWE-400 | Sin asignación inicial | Sin asignación inicial | Provisional |
