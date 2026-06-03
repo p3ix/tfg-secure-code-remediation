@@ -24,3 +24,6 @@ htmlcov/
 .DS_Store
 Thumbs.db
 .cursor/
+
+# Plantilla Memoria
+plantillaLatex-master/
