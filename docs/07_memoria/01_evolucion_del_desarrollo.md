@@ -100,6 +100,12 @@ Tras consolidar el MVP sobre `fixtures/mvp/`, el siguiente paso defendible fue *
 
 ---
 
+## 10. Pulido de la vista web sin IA (rutas presentables)
+
+En pruebas reales con ZIP se observó que Bandit reportaba rutas absolutas del directorio temporal del servidor (`/tmp/tfg-unzip-...`), poco legibles en el dashboard y en capturas para la memoria. Se añadió una **normalización post-escaneo** en `analyze_directory`: cada `file_path` de hallazgo se reescribe como ruta **relativa al directorio analizado** cuando la ruta absoluta cae bajo esa raíz. Los modos ZIP, Git y ruta local se benefician del mismo criterio porque comparten el mismo servicio de escaneo. Documentación de entrega: [`docs/04_delivery/rutas-presentables-relativas.md`](../04_delivery/rutas-presentables-relativas.md).
+
+---
+
 ## Referencias cruzadas en el repositorio
 
 Para no duplicar contenido técnico, este capítulo se apoya en documentos ya existentes, entre otros:

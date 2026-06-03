@@ -19,6 +19,7 @@ from typing import Any
 from urllib.parse import urlparse
 
 from app.config import get_settings
+from app.models.finding import NormalizedFinding
 from app.services.findings_loader import load_all_findings
 from app.services.findings_mapper import enrich_findings_with_classification
 from app.services.pipeline_orchestrator import build_pipeline_view
@@ -49,6 +50,25 @@ def _preview_output(text: str, limit: int = 600) -> str:
 def _log_stage(event: str, **fields: Any) -> None:
     payload = {"event": event, **fields}
     logger.info("analysis_stage=%s payload=%s", event, payload)
+
+
+def _presentable_file_path(file_path: str, analysis_root: Path) -> str:
+    """Convierte rutas absolutas bajo la raíz del escaneo a relativas (vista web)."""
+    root = analysis_root.resolve()
+    path = Path(file_path)
+    if not path.is_absolute():
+        return path.as_posix()
+    try:
+        return path.resolve().relative_to(root).as_posix()
+    except ValueError:
+        return path.as_posix()
+
+
+def _relativize_findings_paths(
+    findings: list[NormalizedFinding], analysis_root: Path
+) -> None:
+    for finding in findings:
+        finding.file_path = _presentable_file_path(finding.file_path, analysis_root)
 
 
 def _call_analyze_directory(
@@ -237,6 +257,7 @@ def analyze_directory(
             semgrep_report_path=semgrep_report,
         )
         enriched = enrich_findings_with_classification(findings)
+        _relativize_findings_paths(enriched, root)
         _log_stage(
             "scan_parse_done",
             analysis_id=analysis_id,
