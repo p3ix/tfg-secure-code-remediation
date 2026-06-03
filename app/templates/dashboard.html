@@ -524,6 +524,64 @@
       color: var(--muted);
       margin-top: 0.4rem;
     }
+    .tool-diagnostics {
+      margin-bottom: 1.25rem;
+    }
+    .tool-diagnostics h3 {
+      font-size: 1rem;
+      margin-bottom: 0.65rem;
+      color: #f4fbff;
+    }
+    .tool-diagnostics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 0.75rem;
+    }
+    .tool-card {
+      padding: 0.85rem 0.95rem;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.03);
+    }
+    .tool-card-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.45rem;
+    }
+    .tool-card-head strong {
+      text-transform: capitalize;
+      color: #f4fbff;
+    }
+    .tool-status-ok,
+    .tool-status-completed_with_findings {
+      color: var(--accent);
+      font-size: 0.82rem;
+    }
+    .tool-status-error {
+      color: var(--sev-high);
+      font-size: 0.82rem;
+    }
+    .tool-status-unknown {
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+    .tool-card p {
+      color: var(--muted);
+      font-size: 0.88rem;
+      margin: 0.25rem 0;
+    }
+    .tool-card pre {
+      margin-top: 0.45rem;
+      padding: 0.5rem;
+      border-radius: var(--radius-sm);
+      background: rgba(0, 0, 0, 0.25);
+      font-size: 0.75rem;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
     a {
       color: var(--accent);
     }
@@ -739,6 +797,27 @@
             </div>
           </section>
         </div>
+
+        {% if scan.meta.tool_diagnostics %}
+        <section class="tool-diagnostics">
+          <h3 class="section-title">Diagnóstico Bandit / Semgrep</h3>
+          <div class="tool-diagnostics-grid">
+            {% for tool in scan.meta.tool_diagnostics %}
+            <article class="tool-card">
+              <div class="tool-card-head">
+                <strong>{{ tool.tool }}</strong>
+                <span class="tool-status-{{ tool.status }}">{{ tool.status_label }}</span>
+              </div>
+              <p>returncode: <code>{{ tool.returncode }}</code> · hallazgos: <strong>{{ tool.findings_count }}</strong></p>
+              {% if tool.note %}<p>{{ tool.note }}</p>{% endif %}
+              {% if tool.stderr_preview %}
+              <pre>{{ tool.stderr_preview }}</pre>
+              {% endif %}
+            </article>
+            {% endfor %}
+          </div>
+        </section>
+        {% endif %}
 
         <section class="findings">
           {% if scan.findings|length == 0 %}

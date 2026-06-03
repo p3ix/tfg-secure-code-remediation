@@ -54,6 +54,10 @@ def test_dashboard_analyze_runtime_renders_presentable_result(monkeypatch) -> No
                 "bandit": "reports/runtime/bandit.json",
                 "semgrep": "reports/runtime/semgrep.json",
             },
+            "tool_runs": {
+                "bandit": {"returncode": 1, "stderr_preview": ""},
+                "semgrep": {"returncode": 0, "stderr_preview": ""},
+            },
             "findings": [
                 {
                     "source_tool": "bandit",
@@ -86,6 +90,8 @@ def test_dashboard_analyze_runtime_renders_presentable_result(monkeypatch) -> No
     assert "fixtures/mvp" in response.text
     assert "verify_false" in response.text
     assert "Remediación asistida posible" in response.text
+    assert "Diagnóstico Bandit / Semgrep" in response.text
+    assert "returncode" in response.text
 
 
 def test_dashboard_analyze_zip_uses_uploaded_file(monkeypatch) -> None:

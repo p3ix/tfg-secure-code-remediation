@@ -3,6 +3,7 @@ from pathlib import Path
 from app.models.finding import NormalizedFinding
 from app.services.presentable_scan import (
     build_presentable_scan,
+    build_tool_diagnostics,
     filter_presentable_scan,
     presentable_from_internal_analysis,
 )
@@ -88,6 +89,74 @@ def test_filter_presentable_scan_hide_info() -> None:
     assert unchanged == scan
 
 
+def test_build_tool_diagnostics_from_tool_runs() -> None:
+    findings = [
+        NormalizedFinding(
+            source_tool="bandit",
+            source_rule_id="B602",
+            file_path="a.py",
+            line_start=1,
+            raw_message="x",
+            severity="low",
+            mvp_category="command_injection",
+            candidate_for_remediation=True,
+            remediation_mode="autofix_candidate",
+        ),
+        NormalizedFinding(
+            source_tool="bandit",
+            source_rule_id="B404",
+            file_path="a.py",
+            line_start=1,
+            raw_message="y",
+            severity="low",
+            mvp_category="subprocess_import_info",
+            candidate_for_remediation=False,
+            remediation_mode="detection_only",
+        ),
+    ]
+    tool_runs = {
+        "bandit": {"returncode": 1, "stderr_preview": "bandit warn"},
+        "semgrep": {"returncode": 0, "stderr_preview": ""},
+    }
+    diag = build_tool_diagnostics(tool_runs, findings)
+    assert len(diag) == 2
+    assert diag[0]["tool"] == "bandit"
+    assert diag[0]["findings_count"] == 2
+    assert diag[0]["status"] == "completed_with_findings"
+    assert diag[1]["tool"] == "semgrep"
+    assert diag[1]["findings_count"] == 0
+    assert diag[1]["status"] == "ok"
+    assert "note" in diag[1]
+
+
+def test_presentable_from_internal_includes_tool_diagnostics() -> None:
+    internal = {
+        "analysis_target": "upload.zip",
+        "execution_mode": "runtime",
+        "tool_runs": {
+            "bandit": {"returncode": 1},
+            "semgrep": {"returncode": 0},
+        },
+        "findings": [
+            {
+                "source_tool": "bandit",
+                "source_rule_id": "B602",
+                "file_path": "src/a.py",
+                "line_start": 1,
+                "raw_message": "shell",
+                "severity": "low",
+                "mvp_category": "command_injection",
+                "candidate_for_remediation": True,
+                "remediation_mode": "autofix_candidate",
+            }
+        ],
+    }
+    out = presentable_from_internal_analysis(internal)
+    assert "tool_diagnostics" in out["meta"]
+    assert len(out["meta"]["tool_diagnostics"]) == 2
+    assert out["meta"]["tool_diagnostics"][0]["findings_count"] == 1
+
+
 def test_presentable_from_internal_analysis_roundtrip() -> None:
     internal = {
         "analysis_target": "fixtures/mvp",
@@ -128,6 +197,7 @@ def test_presentable_from_internal_analysis_roundtrip() -> None:
 
     assert out["meta"]["execution_mode"] == "static_reports"
     assert out["findings"][0]["category"] == "command_injection"
+    assert "tool_diagnostics" not in out["meta"]
 
 
 def test_presentable_from_internal_skips_invalid_findings() -> None:
