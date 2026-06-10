@@ -7,7 +7,6 @@ de análisis real responde sin depender de la capa IA.
 
 from pathlib import Path
 
-import pytest
 from fastapi.testclient import TestClient
 
 from app.config import get_settings

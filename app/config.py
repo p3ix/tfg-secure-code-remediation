@@ -61,7 +61,7 @@ def _parse_allowed_hosts(name: str, default: str) -> frozenset[str]:
 
 
 @lru_cache
-def get_settings() -> "Settings":
+def get_settings() -> Settings:
     return Settings()
 
 

@@ -4,7 +4,6 @@ from dataclasses import replace
 
 from app.models.finding import NormalizedFinding
 
-
 CLASSIFICATION_MAP: dict[str, dict[str, str | int | None]] = {
     "command_injection": {
         "cwe_id": 78,

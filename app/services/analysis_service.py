@@ -8,7 +8,6 @@ from app.services.findings_loader import load_all_findings
 from app.services.findings_mapper import enrich_findings_with_classification
 from app.services.pipeline_orchestrator import build_pipeline_view
 
-
 BANDIT_REPORT = Path("reports/bandit/fixtures-mvp-bandit.json")
 SEMGREP_REPORT = Path("reports/semgrep/fixtures-mvp-semgrep.json")
 

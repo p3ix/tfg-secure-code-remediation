@@ -1,6 +1,6 @@
-from pathlib import Path
-import logging
 import inspect
+import logging
+from pathlib import Path
 from uuid import uuid4
 
 from fastapi import (
@@ -18,16 +18,16 @@ from starlette.templating import Jinja2Templates
 
 from app.config import get_settings
 from app.services.analysis_service import analyze_fixtures_reports
+from app.services.pipeline_orchestrator import run_mvp_autofix_verification_roundtrip
+from app.services.presentable_scan import (
+    filter_presentable_scan,
+    presentable_from_internal_analysis,
+)
 from app.services.project_scan_service import (
     PayloadTooLargeError,
     analyze_local_path_relative,
     analyze_zip_bytes,
     clone_and_analyze_repo,
-)
-from app.services.pipeline_orchestrator import run_mvp_autofix_verification_roundtrip
-from app.services.presentable_scan import (
-    filter_presentable_scan,
-    presentable_from_internal_analysis,
 )
 from app.services.runtime_analysis_service import analyze_fixtures_runtime
 

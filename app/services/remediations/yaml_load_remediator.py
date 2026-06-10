@@ -4,7 +4,6 @@ import re
 
 from app.models.remediation import RemediationProposal
 
-
 UNSAFE_YAML_LOAD_PATTERN = re.compile(
     r"yaml\.load\(\s*(?P<data>[^,\n]+?)\s*,\s*Loader\s*=\s*yaml\.(?P<loader>Loader|UnsafeLoader|CLoader)\s*\)"
 )

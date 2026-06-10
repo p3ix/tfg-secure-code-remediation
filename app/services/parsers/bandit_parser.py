@@ -99,7 +99,6 @@ def parse_bandit_result(
     *,
     analysis_target: str | None = None,
 ) -> NormalizedFinding:
-    test_id = result.get("test_id", "")
     mvp_category = infer_mvp_category_from_bandit_result(result)
     remediation_mode = infer_remediation_mode(mvp_category)
 

@@ -116,6 +116,10 @@ Tras probar ZIPs reales con `subprocess`, dos reglas frecuentes de Bandit seguí
 
 En escaneos runtime, a veces solo Bandit aportaba filas y Semgrep no, lo que podía interpretarse como un fallo. Se expone en la vista web un panel **Diagnóstico Bandit / Semgrep** derivado de `tool_runs`: código de salida, hallazgos por herramienta y vista previa de stderr. El dato viaja en `scan.meta.tool_diagnostics` del JSON presentable. Documentación: [`docs/04_delivery/diagnostico-herramientas-dashboard.md`](../04_delivery/diagnostico-herramientas-dashboard.md).
 
+## 13. Barrido final de calidad antes de la IA
+
+Antes de abordar la integración de la capa IA, decidí cerrar la fase de "web operativa sin IA" con un barrido transversal centrado en dejar el proyecto compacto, pulido y con garantías reproducibles, sin añadir funcionalidad nueva. El barrido tuvo cuatro frentes. Primero, **calidad de código**: incorporé `ruff` como linter e ordenador de imports (configurado en `pyproject.toml`), corregí los pocos avisos existentes (una variable y dos imports sin uso, además del orden de imports) e integré el lint tanto en CI como en `pre-commit`, de modo que el estilo deja de depender de la revisión manual. Segundo, **cobertura**: reforcé el módulo más débil (`runtime_analysis_service.py`) con tests de orquestación que simulan la ejecución de Bandit y Semgrep sin depender de los binarios, con lo que la cobertura global subió a ~92 % y elevé el gate de 60 % a 85 % para fijar ese nivel. Tercero, **verificación de flujos web** extremo a extremo (salud, dashboard, `ai/status`, subida ZIP, contrato de error y clonado Git), confirmando que las validaciones y el contrato unificado de error responden correctamente. Cuarto, **consistencia documental** (README y esta memoria). El barrido quedó documentado en [`docs/04_delivery/barrido-final-sin-ia.md`](../04_delivery/barrido-final-sin-ia.md) y dejó identificada, como trabajo futuro, una mejora de degradación elegante cuando solo una de las dos herramientas falla.
+
 ---
 
 ## Referencias cruzadas en el repositorio
