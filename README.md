@@ -12,6 +12,7 @@ En **ampliación**: análisis de **proyectos reales** (subida ZIP, ruta local ba
 
 | Documento | Contenido |
 |-----------|-----------|
+| [`CHANGELOG.md`](CHANGELOG.md) | Historial de versiones (release `v0.1.0`) |
 | [`docs/00_scope.md`](docs/00_scope.md) | Alcance MVP y fases siguientes |
 | [`docs/01_roadmap_and_documentation_ritual.md`](docs/01_roadmap_and_documentation_ritual.md) | Hoja de ruta, ritual issues/docs, cadencia memoria |
 | [`docs/01_architecture_overview.md`](docs/01_architecture_overview.md) | Arquitectura |
