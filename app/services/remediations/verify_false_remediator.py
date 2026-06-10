@@ -4,7 +4,6 @@ import re
 
 from app.models.remediation import RemediationProposal
 
-
 VERIFY_FALSE_PATTERN = re.compile(r"\bverify\s*=\s*False\b")
 
 

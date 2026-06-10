@@ -4,7 +4,6 @@ import re
 
 from app.models.remediation import RemediationProposal
 
-
 DEBUG_TRUE_PATTERN = re.compile(r"\bdebug\s*=\s*True\b")
 
 

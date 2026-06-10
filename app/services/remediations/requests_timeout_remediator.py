@@ -4,7 +4,6 @@ import re
 
 from app.models.remediation import RemediationProposal
 
-
 REQUESTS_CALL_PATTERN = re.compile(
     r"(?P<call>requests\.(get|post|put|delete|patch|head|options)\((?P<args>.*?)\))",
     re.DOTALL,

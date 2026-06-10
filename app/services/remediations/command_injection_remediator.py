@@ -4,7 +4,6 @@ import re
 
 from app.models.remediation import RemediationProposal
 
-
 SHELL_TRUE_PATTERN = re.compile(
     r"(?P<prefix>subprocess\.(?:run|call|Popen)\()"
     r"(?P<cmd>[^,]+),\s*shell\s*=\s*True"

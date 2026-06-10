@@ -4,7 +4,6 @@ from app.services.findings_loader import (
     load_semgrep_findings,
 )
 
-
 BANDIT_REPORT = "reports/bandit/fixtures-mvp-bandit.json"
 SEMGREP_REPORT = "reports/semgrep/fixtures-mvp-semgrep.json"
 

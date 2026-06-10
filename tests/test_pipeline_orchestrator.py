@@ -1,6 +1,6 @@
-from app.models.finding import NormalizedFinding
 from pathlib import Path
 
+from app.models.finding import NormalizedFinding
 from app.services.pipeline_orchestrator import (
     build_pipeline_view,
     run_mvp_autofix_verification_roundtrip,

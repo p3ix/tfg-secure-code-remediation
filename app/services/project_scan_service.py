@@ -7,8 +7,8 @@ en `reports/runtime/` para evitar colisiones entre peticiones.
 
 from __future__ import annotations
 
-import io
 import inspect
+import io
 import logging
 import subprocess
 import tempfile

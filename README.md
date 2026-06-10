@@ -80,6 +80,16 @@ Variables útiles: `TFG_ZIP_MAX_BYTES`, `TFG_LOCAL_ANALYSIS_ROOT`, `TFG_GIT_CLON
 
 - `GET /ai/status` — estado operativo: IA (`TFG_AI_EXPLANATIONS_ENABLED`), Git/local, límites de ZIP y rutas, timeouts (`analysis_subprocess_timeout_sec`), etc.
 
+## Calidad de código (lint)
+
+El proyecto usa [`ruff`](https://docs.astral.sh/ruff/) (incluido en el extra `dev`) como linter e ordenador de imports. La configuración vive en `pyproject.toml` (`[tool.ruff]`):
+
+```bash
+export PATH="$PWD/.venv/bin:$PATH"
+ruff check app tests          # detectar problemas
+ruff check app tests --fix    # corregir lo autofixeable (imports, etc.)
+```
+
 ## Tests
 
 ```bash
@@ -87,11 +97,11 @@ export PATH="$PWD/.venv/bin:$PATH"
 pytest -q
 ```
 
-La suite usa cobertura sobre `app/` con reporte `term-missing` y umbral minimo del **60%** (configurado en `pyproject.toml` mediante `pytest-cov`).
+La suite usa cobertura sobre `app/` con reporte `term-missing` y umbral minimo del **85%** (configurado en `pyproject.toml` mediante `pytest-cov`).
 
 ```bash
 export PATH="$PWD/.venv/bin:$PATH"
-pytest --cov=app --cov-report=term-missing --cov-fail-under=60
+pytest --cov=app --cov-report=term-missing --cov-fail-under=85
 ```
 
 En CI (Ubuntu) las dependencias se instalan como en [`.github/workflows/ci.yml`](.github/workflows/ci.yml) y se aplica el mismo gate de cobertura.
