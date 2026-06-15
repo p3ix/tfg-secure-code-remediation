@@ -457,7 +457,7 @@ def test_local_path_forbidden_when_disabled(monkeypatch, tmp_path) -> None:
 
 
 def test_analysis_upload_zip_success(monkeypatch) -> None:
-    def fake_analyze_zip(content: bytes) -> dict:
+    def fake_analyze_zip(content: bytes, *, analysis_id: str | None = None) -> dict:
         assert content == b"PK\x03\x04zip-ok"
         return {"analysis_target": "upload.zip", "total_findings": 0, "findings": []}
 
@@ -477,7 +477,7 @@ def test_analysis_upload_zip_success(monkeypatch) -> None:
 
 
 def test_analysis_upload_zip_bad_request(monkeypatch) -> None:
-    def fake_analyze_zip(_: bytes) -> dict:
+    def fake_analyze_zip(_: bytes, *, analysis_id: str | None = None) -> dict:
         raise ValueError("zip invalido")
 
     monkeypatch.setattr("app.main.analyze_zip_bytes", fake_analyze_zip)
@@ -495,7 +495,7 @@ def test_analysis_upload_zip_bad_request(monkeypatch) -> None:
 
 
 def test_analysis_upload_zip_runtime_error(monkeypatch) -> None:
-    def fake_analyze_zip(_: bytes) -> dict:
+    def fake_analyze_zip(_: bytes, *, analysis_id: str | None = None) -> dict:
         raise RuntimeError("bandit no disponible")
 
     monkeypatch.setattr("app.main.analyze_zip_bytes", fake_analyze_zip)
@@ -575,7 +575,7 @@ def test_api_error_contract_has_code_and_message() -> None:
 
 
 def test_analysis_upload_zip_payload_too_large(monkeypatch) -> None:
-    def fake_analyze_zip(_: bytes) -> dict:
+    def fake_analyze_zip(_: bytes, *, analysis_id: str | None = None) -> dict:
         raise PayloadTooLargeError("ZIP demasiado grande")
 
     monkeypatch.setattr("app.main.analyze_zip_bytes", fake_analyze_zip)
@@ -591,7 +591,7 @@ def test_analysis_upload_zip_payload_too_large(monkeypatch) -> None:
 
 
 def test_analysis_git_clone_success(monkeypatch) -> None:
-    def fake_clone(url: str) -> dict:
+    def fake_clone(url: str, *, analysis_id: str | None = None) -> dict:
         assert url == "https://github.com/octocat/Hello-World.git"
         return {"analysis_target": f"git:{url}", "total_findings": 1, "findings": [{}]}
 
@@ -610,7 +610,7 @@ def test_analysis_git_clone_success(monkeypatch) -> None:
 
 
 def test_analysis_git_clone_bad_request(monkeypatch) -> None:
-    def fake_clone(_: str) -> dict:
+    def fake_clone(_: str, *, analysis_id: str | None = None) -> dict:
         raise ValueError("URL invalida")
 
     monkeypatch.setattr("app.main.clone_and_analyze_repo", fake_clone)
@@ -625,7 +625,7 @@ def test_analysis_git_clone_bad_request(monkeypatch) -> None:
 
 
 def test_analysis_git_clone_forbidden(monkeypatch) -> None:
-    def fake_clone(_: str) -> dict:
+    def fake_clone(_: str, *, analysis_id: str | None = None) -> dict:
         raise PermissionError("clonado desactivado")
 
     monkeypatch.setattr("app.main.clone_and_analyze_repo", fake_clone)
@@ -640,7 +640,7 @@ def test_analysis_git_clone_forbidden(monkeypatch) -> None:
 
 
 def test_analysis_git_clone_runtime_error(monkeypatch) -> None:
-    def fake_clone(_: str) -> dict:
+    def fake_clone(_: str, *, analysis_id: str | None = None) -> dict:
         raise RuntimeError("git clone fallo")
 
     monkeypatch.setattr("app.main.clone_and_analyze_repo", fake_clone)
@@ -669,7 +669,7 @@ def test_clone_and_analyze_repo_service_success(monkeypatch, tmp_path) -> None:
                 stderr="",
             )
 
-        def fake_analyze_directory(target: Path, *, analysis_target_label: str) -> dict:
+        def fake_analyze_directory(target: Path, *, analysis_target_label: str, analysis_id: str | None = None) -> dict:
             assert target.is_dir()
             return {"analysis_target": analysis_target_label, "findings": [], "total_findings": 0}
 
@@ -765,7 +765,7 @@ def test_local_path_with_root_success(monkeypatch, tmp_path) -> None:
     monkeypatch.setenv("TFG_LOCAL_ANALYSIS_ROOT", str(root))
     get_settings.cache_clear()
 
-    def fake_local(relative_path: str, *, allowed_root) -> dict:
+    def fake_local(relative_path: str, *, allowed_root, analysis_id: str | None = None) -> dict:
         assert relative_path == "proj"
         assert str(allowed_root) == str(root)
         return {"analysis_target": f"local:{relative_path}", "findings": [], "total_findings": 0}
@@ -788,7 +788,7 @@ def test_local_path_with_root_bad_request(monkeypatch, tmp_path) -> None:
     monkeypatch.setenv("TFG_LOCAL_ANALYSIS_ROOT", str(root))
     get_settings.cache_clear()
 
-    def fake_local(_: str, *, allowed_root) -> dict:
+    def fake_local(_: str, *, allowed_root, analysis_id: str | None = None) -> dict:
         assert str(allowed_root) == str(root)
         raise ValueError("ruta invalida")
 
@@ -810,7 +810,7 @@ def test_local_path_with_root_not_found(monkeypatch, tmp_path) -> None:
     monkeypatch.setenv("TFG_LOCAL_ANALYSIS_ROOT", str(root))
     get_settings.cache_clear()
 
-    def fake_local(_: str, *, allowed_root) -> dict:
+    def fake_local(_: str, *, allowed_root, analysis_id: str | None = None) -> dict:
         assert str(allowed_root) == str(root)
         raise FileNotFoundError("proyecto no encontrado")
 
@@ -832,7 +832,7 @@ def test_local_path_with_root_runtime_error(monkeypatch, tmp_path) -> None:
     monkeypatch.setenv("TFG_LOCAL_ANALYSIS_ROOT", str(root))
     get_settings.cache_clear()
 
-    def fake_local(_: str, *, allowed_root) -> dict:
+    def fake_local(_: str, *, allowed_root, analysis_id: str | None = None) -> dict:
         assert str(allowed_root) == str(root)
         raise RuntimeError("bandit timeout")
 

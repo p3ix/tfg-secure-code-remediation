@@ -48,7 +48,7 @@ def test_analyze_local_path_relative_normalizes_analysis_target(
     project = root / "proj" / "nested"
     project.mkdir(parents=True)
 
-    def fake_analyze_directory(target: Path, *, analysis_target_label: str) -> dict:
+    def fake_analyze_directory(target: Path, *, analysis_target_label: str, analysis_id: str | None = None) -> dict:
         assert target == project.resolve()
         return {"analysis_target": analysis_target_label, "findings": [], "total_findings": 0}
 

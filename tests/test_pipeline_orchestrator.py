@@ -69,7 +69,9 @@ def test_run_mvp_autofix_verification_roundtrip_partial_errors(
     )
     monkeypatch.setattr(
         "app.services.pipeline_orchestrator._load_verifier_map",
-        lambda: {"unsafe_yaml_load": lambda source: {"ok": bool(source)}},
+        lambda: {
+            "unsafe_yaml_load": lambda source: {"verified": bool(source)},
+        },
     )
 
     out = run_mvp_autofix_verification_roundtrip()
@@ -77,6 +79,8 @@ def test_run_mvp_autofix_verification_roundtrip_partial_errors(
     assert summary["categories_total"] == 1
     assert summary["categories_with_errors"] == 1
     assert summary["fixtures_total"] == 2
+    # 1 fixture se procesó sin error y su verificación fue positiva; el otro falta.
+    assert summary["fixtures_processed"] == 1
     assert summary["fixtures_verified"] == 1
     assert summary["fixtures_with_errors"] == 1
     assert out["categories"]["unsafe_yaml_load"][1]["error"] == "fixture no encontrado"
