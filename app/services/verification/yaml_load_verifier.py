@@ -1,92 +1,16 @@
 from __future__ import annotations
 
-import tempfile
-from pathlib import Path
+from typing import Any
 
-from app.services.findings_loader import load_all_findings
-from app.services.findings_mapper import enrich_findings_with_classification
 from app.services.remediations.yaml_load_remediator import (
     propose_yaml_load_remediation,
 )
-from app.services.runtime_analysis_service import (
-    build_bandit_command,
-    build_semgrep_command,
-    run_analysis_command,
-)
+from app.services.verification._common import verify_remediation
 
 
-def verify_yaml_load_remediation(source_code: str) -> dict:
-    proposal = propose_yaml_load_remediation(source_code)
-
-    if not proposal.applicable or not proposal.changed_content:
-        return {
-            "verification_kind": "unsafe_yaml_load",
-            "applicable": False,
-            "verified": False,
-            "reason": "No se pudo generar una propuesta de remediación aplicable.",
-            "remaining_findings": [],
-        }
-
-    with tempfile.TemporaryDirectory() as tmp_dir:
-        tmp_path = Path(tmp_dir)
-        target_dir = tmp_path / "case"
-        target_dir.mkdir(parents=True, exist_ok=True)
-
-        target_file = target_dir / "remediated_yaml_case.py"
-        target_file.write_text(proposal.changed_content, encoding="utf-8")
-
-        bandit_report = tmp_path / "bandit-report.json"
-        semgrep_report = tmp_path / "semgrep-report.json"
-
-        bandit_cmd = build_bandit_command(target_dir, bandit_report)
-        semgrep_cmd = build_semgrep_command(target_dir, semgrep_report)
-
-        bandit_result = run_analysis_command(bandit_cmd)
-        semgrep_result = run_analysis_command(semgrep_cmd)
-
-        if not bandit_report.exists():
-            raise RuntimeError("Bandit no generó report de verificación.")
-
-        semgrep_report_missing = False
-        if not semgrep_report.exists():
-            # En algunos entornos Semgrep puede fallar antes de persistir JSON
-            # (por red/reglas remotas). Mantengo el flujo verificable con fallback vacío.
-            semgrep_report.write_text('{"results": []}', encoding="utf-8")
-            semgrep_report_missing = True
-
-        findings = load_all_findings(
-            bandit_report_path=bandit_report,
-            semgrep_report_path=semgrep_report,
-        )
-        findings = enrich_findings_with_classification(findings)
-
-        remaining_yaml_findings = [
-            f for f in findings if f.mvp_category == "unsafe_yaml_load"
-        ]
-
-        return {
-            "verification_kind": "unsafe_yaml_load",
-            "applicable": True,
-            "verified": len(remaining_yaml_findings) == 0,
-            "reason": (
-                "No quedan hallazgos de unsafe_yaml_load tras la remediación."
-                if len(remaining_yaml_findings) == 0
-                else "Siguen existiendo hallazgos de unsafe_yaml_load tras la remediación."
-            ),
-            "bandit_returncode": bandit_result.returncode,
-            "semgrep_returncode": semgrep_result.returncode,
-            "semgrep_report_missing": semgrep_report_missing,
-            "remaining_findings": [
-                {
-                    "source_tool": f.source_tool,
-                    "source_rule_id": f.source_rule_id,
-                    "file_path": f.file_path,
-                    "line_start": f.line_start,
-                    "severity": f.severity,
-                    "mvp_category": f.mvp_category,
-                    "raw_message": f.raw_message,
-                }
-                for f in remaining_yaml_findings
-            ],
-            "proposed_snippet": proposal.proposed_snippet,
-        }
+def verify_yaml_load_remediation(source_code: str) -> dict[str, Any]:
+    return verify_remediation(
+        source_code,
+        kind="unsafe_yaml_load",
+        propose_fn=propose_yaml_load_remediation,
+    )

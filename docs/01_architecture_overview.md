@@ -63,7 +63,7 @@ Sus funciones principales serán:
 - preparar el proyecto para su inspección;
 - garantizar que el análisis se ejecuta sobre el material esperado.
 
-La interfaz web (`/dashboard`) cubre `fixture_reports`, `fixture_runtime`, `upload_zip` y `local_path` (si hay raíz local configurada). El flujo de `git-clone` y el pipeline completo de verificación MVP se mantienen como endpoints API en esta iteración.
+La interfaz web (`/dashboard`) cubre los tres modos reales (`upload_zip`, `git_clone` y `local_path`, este último si hay raíz local configurada) además de los modos MVP/demo (`fixture_reports`, `fixture_runtime`). El pipeline completo de verificación MVP (`repair → verify` sobre los fixtures canónicos) se mantiene como endpoint API en esta iteración.
 
 ### 4.3. Módulo de análisis estático
 

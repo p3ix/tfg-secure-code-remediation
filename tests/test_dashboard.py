@@ -46,7 +46,7 @@ def test_dashboard_renders_notice_when_reports_missing(monkeypatch) -> None:
 
 
 def test_dashboard_analyze_runtime_renders_presentable_result(monkeypatch) -> None:
-    def fake_runtime_analysis() -> dict:
+    def fake_runtime_analysis(*, analysis_id: str | None = None) -> dict:
         return {
             "analysis_target": "fixtures/mvp",
             "execution_mode": "runtime",
@@ -95,7 +95,7 @@ def test_dashboard_analyze_runtime_renders_presentable_result(monkeypatch) -> No
 
 
 def test_dashboard_analyze_zip_uses_uploaded_file(monkeypatch) -> None:
-    def fake_analyze_zip(content: bytes) -> dict:
+    def fake_analyze_zip(content: bytes, *, analysis_id: str | None = None) -> dict:
         assert content == b"PK\x03\x04zip-content"
         return {
             "analysis_target": "upload.zip",
@@ -176,7 +176,7 @@ def test_dashboard_analyze_local_path_requires_value(monkeypatch, tmp_path) -> N
 
 
 def test_dashboard_renders_empty_findings_state(monkeypatch) -> None:
-    def fake_runtime_analysis() -> dict:
+    def fake_runtime_analysis(*, analysis_id: str | None = None) -> dict:
         return {
             "analysis_target": "fixtures/mvp",
             "execution_mode": "runtime",
@@ -208,7 +208,7 @@ def test_dashboard_analyze_local_path_error_is_rendered(monkeypatch) -> None:
 
 
 def test_dashboard_analyze_git_clone_success(monkeypatch) -> None:
-    def fake_clone(url: str) -> dict:
+    def fake_clone(url: str, *, analysis_id: str | None = None) -> dict:
         assert url == "https://github.com/octocat/Hello-World.git"
         return {
             "analysis_target": f"git:{url}",

@@ -82,6 +82,7 @@ def run_mvp_autofix_verification_roundtrip() -> dict[str, Any]:
             "categories_ok": 0,
             "categories_with_errors": 0,
             "fixtures_total": 0,
+            "fixtures_processed": 0,
             "fixtures_verified": 0,
             "fixtures_with_errors": 0,
         },
@@ -115,13 +116,18 @@ def run_mvp_autofix_verification_roundtrip() -> dict[str, Any]:
                 continue
             try:
                 source = rel_path.read_text(encoding="utf-8")
+                verification = verify_fn(source)
                 per_file.append(
                     {
                         "fixture": str(rel_path),
-                        "verification": verify_fn(source),
+                        "verification": verification,
                     }
                 )
-                results["summary"]["fixtures_verified"] += 1
+                # `processed` = ejecutado sin excepción; `verified` = el parche
+                # eliminó realmente el hallazgo (verified is True).
+                results["summary"]["fixtures_processed"] += 1
+                if isinstance(verification, dict) and verification.get("verified") is True:
+                    results["summary"]["fixtures_verified"] += 1
             except (OSError, ValueError, RuntimeError) as exc:
                 per_file.append(
                     {

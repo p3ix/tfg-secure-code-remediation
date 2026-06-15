@@ -6,7 +6,7 @@ client = TestClient(app)
 
 
 def test_run_fixtures_endpoint_returns_runtime_payload(monkeypatch) -> None:
-    def fake_runtime_analysis() -> dict:
+    def fake_runtime_analysis(*, analysis_id: str | None = None) -> dict:
         return {
             "analysis_target": "fixtures/mvp",
             "execution_mode": "runtime",
@@ -56,7 +56,7 @@ def test_run_fixtures_endpoint_returns_runtime_payload(monkeypatch) -> None:
 
 
 def test_run_fixtures_presentable_endpoint_returns_filtered_payload(monkeypatch) -> None:
-    def fake_runtime_analysis() -> dict:
+    def fake_runtime_analysis(*, analysis_id: str | None = None) -> dict:
         return {
             "analysis_target": "fixtures/mvp",
             "execution_mode": "runtime",
@@ -108,7 +108,7 @@ def test_run_fixtures_presentable_endpoint_returns_filtered_payload(monkeypatch)
 
 
 def test_run_fixtures_presentable_endpoint_runtime_error(monkeypatch) -> None:
-    def fake_runtime_analysis() -> dict:
+    def fake_runtime_analysis(*, analysis_id: str | None = None) -> dict:
         raise RuntimeError("fallo runtime")
 
     monkeypatch.setattr("app.main.analyze_fixtures_runtime", fake_runtime_analysis)

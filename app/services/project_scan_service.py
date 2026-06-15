@@ -7,7 +7,6 @@ en `reports/runtime/` para evitar colisiones entre peticiones.
 
 from __future__ import annotations
 
-import inspect
 import io
 import logging
 import subprocess
@@ -69,25 +68,6 @@ def _relativize_findings_paths(
 ) -> None:
     for finding in findings:
         finding.file_path = _presentable_file_path(finding.file_path, analysis_root)
-
-
-def _call_analyze_directory(
-    target: Path,
-    *,
-    analysis_target_label: str,
-    analysis_id: str | None,
-) -> dict[str, Any]:
-    try:
-        sig = inspect.signature(analyze_directory)
-    except (TypeError, ValueError):
-        sig = None
-    if sig is not None and "analysis_id" in sig.parameters:
-        return analyze_directory(
-            target,
-            analysis_target_label=analysis_target_label,
-            analysis_id=analysis_id,
-        )
-    return analyze_directory(target, analysis_target_label=analysis_target_label)
 
 
 def _validate_analysis_tree_size(
@@ -334,7 +314,7 @@ def analyze_local_path_relative(
     target = resolve_allowed_analysis_path(relative_path, allowed_root)
     normalized = str(target.relative_to(allowed_root.resolve()))
     label = f"local:{normalized}"
-    return _call_analyze_directory(
+    return analyze_directory(
         target,
         analysis_target_label=label,
         analysis_id=analysis_id,
@@ -364,7 +344,7 @@ def analyze_zip_bytes(zip_bytes: bytes, *, analysis_id: str | None = None) -> di
         )
         _log_stage("zip_extract_done", analysis_id=analysis_id)
         label = "upload.zip (contenido extraído)"
-        return _call_analyze_directory(
+        return analyze_directory(
             dest,
             analysis_target_label=label,
             analysis_id=analysis_id,
@@ -414,7 +394,7 @@ def clone_and_analyze_repo(url: str, *, analysis_id: str | None = None) -> dict[
         if not clone_dir.is_dir():
             raise RuntimeError("Clonado incompleto: no existe el directorio del repositorio.")
 
-        out = _call_analyze_directory(
+        out = analyze_directory(
             clone_dir,
             analysis_target_label=f"git:{url}",
             analysis_id=analysis_id,
