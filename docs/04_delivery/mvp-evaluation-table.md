@@ -20,3 +20,7 @@ Este documento resume qué hace el sistema con cada categoría del MVP: detecci�
 ## Duplicados entre herramientas y hallazgos informativos
 
 Para la defensa: varias filas por el mismo fichero pueden deberse a Bandit + Semgrep, o a reglas distintas (p. ej. B404 + B602). El parámetro `hide_info` en la vista presentable reduce ruido para demos. Detalle en [scan-noise-and-duplicates.md](scan-noise-and-duplicates.md).
+
+## Evaluación de la capa de explicaciones IA
+
+La calidad de las explicaciones generadas por IA (opcional, ADR-003) se evalúa aparte, con su propia rúbrica, en [ai-explanations-evaluation-table.md](ai-explanations-evaluation-table.md).
