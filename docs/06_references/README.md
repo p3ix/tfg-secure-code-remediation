@@ -147,6 +147,31 @@ Siempre que sea posible, priorizo:
 
 ---
 
+## Inteligencia artificial (capa de explicación)
+
+### [REF-021] Ollama
+- **Tipo**: documentación oficial / proyecto open source
+- **Uso en el TFG**: justificar el proveedor **local recomendado** para la capa de explicación asistida (ADR-003)
+- **Referencia**: Ollama — run LLMs locally
+- **Enlace**: https://ollama.com/
+- **Nota**: permite ejecutar modelos cuantizados en localhost sin enviar código a APIs externas; coherente con privacidad y demo offline
+
+### [REF-019] Anthropic Claude API / SDK
+- **Tipo**: documentación oficial
+- **Uso en el TFG**: justificar un proveedor **API opcional** para comparativa de calidad en la evaluación (ADR-003)
+- **Referencia**: Anthropic — Claude Developer Platform / SDK de Python (`anthropic`)
+- **Enlace**: https://docs.claude.com/en/api/overview
+- **Nota**: no es el proveedor principal; útil si se documenta una comparativa local vs cloud
+
+### [REF-020] OWASP Top 10 for LLM Applications
+- **Tipo**: referencia oficial / proyecto OWASP
+- **Uso en el TFG**: contextualizar riesgos al integrar LLM (especialmente *prompt injection* con código de terceros)
+- **Referencia**: OWASP Top 10 for Large Language Model Applications
+- **Enlace**: https://owasp.org/www-project-top-10-for-large-language-model-applications/
+- **Nota**: útil para justificar el tratamiento del input como dato no confiable y la supervisión humana
+
+---
+
 ## Licencias
 
 ### [REF-018] GitHub licensing a repository

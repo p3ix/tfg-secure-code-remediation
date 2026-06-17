@@ -20,6 +20,8 @@ El título del TFG menciona remediación **asistida por IA**. El MVP actual comb
 
 4. **Punto de extensión en API**: `GET /ai/status` documenta si la capa IA está habilitada y enlaza a este ADR.
 
+5. **Diseño concreto**: ver [ADR-003](ADR-003-ai-explanations-design.md) (IA local con Ollama como principal, stub para tests, API opcional).
+
 ## Consecuencias
 
 - El backend puede evolucionar sin romper tests del núcleo.
