@@ -21,6 +21,7 @@ class AIProvider(Protocol):
     """
 
     name: str
+    model: str
 
     def explain(self, finding: NormalizedFinding) -> AIExplanation | None:
         ...

@@ -47,6 +47,7 @@ class StubProvider:
     """Proveedor determinista para tests, CI y demo offline (ADR-003)."""
 
     name = "stub"
+    model = STUB_MODEL
 
     def explain(self, finding: NormalizedFinding) -> AIExplanation:
         text = _CATEGORY_TEXT.get(finding.mvp_category, _DEFAULT_TEXT)
