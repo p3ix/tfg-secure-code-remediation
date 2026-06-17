@@ -264,3 +264,41 @@ def test_dashboard_analyze_git_clone_disabled(monkeypatch) -> None:
         assert "git clone está desactivado" in response.text
     finally:
         get_settings.cache_clear()
+
+
+def test_dashboard_renders_ai_explanation_when_enabled(monkeypatch) -> None:
+    from app.config import get_settings
+
+    bandit = Path("reports/bandit/fixtures-mvp-bandit.json")
+    semgrep = Path("reports/semgrep/fixtures-mvp-semgrep.json")
+    if not bandit.exists() or not semgrep.exists():
+        return
+
+    monkeypatch.setenv("TFG_AI_EXPLANATIONS_ENABLED", "1")
+    monkeypatch.setenv("TFG_AI_PROVIDER", "stub")
+    get_settings.cache_clear()
+    try:
+        response = client.get("/dashboard")
+        assert response.status_code == 200
+        assert "Explicación IA" in response.text
+        assert "Explicación generada por IA" in response.text
+    finally:
+        get_settings.cache_clear()
+
+
+def test_dashboard_omits_ai_explanation_when_disabled(monkeypatch) -> None:
+    from app.config import get_settings
+
+    bandit = Path("reports/bandit/fixtures-mvp-bandit.json")
+    semgrep = Path("reports/semgrep/fixtures-mvp-semgrep.json")
+    if not bandit.exists() or not semgrep.exists():
+        return
+
+    monkeypatch.setenv("TFG_AI_EXPLANATIONS_ENABLED", "0")
+    get_settings.cache_clear()
+    try:
+        response = client.get("/dashboard")
+        assert response.status_code == 200
+        assert "Explicación IA" not in response.text
+    finally:
+        get_settings.cache_clear()
