@@ -61,5 +61,6 @@ def test_explanation_to_dict_keys() -> None:
         "provider",
         "model",
         "prompt_version",
+        "prompt_hash",
         "cached",
     }

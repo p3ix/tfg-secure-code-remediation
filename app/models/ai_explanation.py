@@ -19,6 +19,7 @@ class AIExplanation:
     provider: str
     model: str
     prompt_version: str
+    prompt_hash: str | None = None
     cached: bool = False
 
     def to_dict(self) -> dict[str, object]:
@@ -29,5 +30,6 @@ class AIExplanation:
             "provider": self.provider,
             "model": self.model,
             "prompt_version": self.prompt_version,
+            "prompt_hash": self.prompt_hash,
             "cached": self.cached,
         }
