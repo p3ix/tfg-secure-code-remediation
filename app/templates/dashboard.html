@@ -933,6 +933,7 @@
                 <span class="ai-tag">Explicación IA</span>
                 <span class="ai-meta">
                   {{ row.ai_explanation.provider }}/{{ row.ai_explanation.model }}
+                  · prompt {{ row.ai_explanation.prompt_version }}
                   {% if row.ai_explanation.cached %}· caché{% endif %}
                 </span>
               </div>

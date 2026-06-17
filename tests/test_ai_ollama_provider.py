@@ -52,6 +52,8 @@ def test_explain_success(monkeypatch: pytest.MonkeyPatch) -> None:
     assert explanation.model == "llama3.2:3b"
     assert explanation.summary == "resumen"
     assert explanation.suggestion == "sugerencia"
+    assert explanation.prompt_version == "v2"
+    assert explanation.prompt_hash and len(explanation.prompt_hash) == 16
 
 
 def test_explain_degrades_on_network_error(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -95,3 +97,9 @@ def test_prompt_excludes_snippet_by_default() -> None:
 def test_prompt_includes_snippet_when_enabled() -> None:
     prompt = _build_prompt(_finding(snippet="import os"), include_snippet=True)
     assert "import os" in prompt
+
+
+def test_prompt_contains_anti_injection_hardening() -> None:
+    prompt = _build_prompt(_finding(), include_snippet=False)
+    assert "no confiables" in prompt
+    assert "ignóralo" in prompt or "ignora" in prompt.lower()
