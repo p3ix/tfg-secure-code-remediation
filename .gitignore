@@ -27,3 +27,7 @@ Thumbs.db
 
 # Plantilla Memoria
 plantillaLatex-master/
+
+# ZIPs de demo / proyectos vulnerables de prueba
+vulnerable_demo.zip
+*.zip
