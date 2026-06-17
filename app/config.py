@@ -47,6 +47,20 @@ def _parse_csv_env(name: str, default: str) -> tuple[str, ...]:
     return values
 
 
+_AI_PROVIDERS = frozenset({"stub", "ollama", "openai"})
+
+
+def _parse_ai_provider_env(name: str, default: str) -> str:
+    raw = os.environ.get(name)
+    if raw is None or raw.strip() == "":
+        return default
+    value = raw.strip().lower()
+    if value not in _AI_PROVIDERS:
+        allowed = ", ".join(sorted(_AI_PROVIDERS))
+        raise ValueError(f"Variable {name} inválida: usar uno de {allowed}")
+    return value
+
+
 def _parse_allowed_hosts(name: str, default: str) -> frozenset[str]:
     hosts = set(_parse_csv_env(name, default))
     if not hosts:
@@ -88,6 +102,15 @@ class Settings:
             "TFG_AI_EXPLANATIONS_ENABLED",
             False,
         )
+        # Capa IA opcional (ADR-003): proveedor, modelo y límites.
+        self.ai_provider: str = _parse_ai_provider_env("TFG_AI_PROVIDER", "ollama")
+        self.ai_model: str = os.environ.get("TFG_AI_MODEL", "llama3.2:3b").strip() or "llama3.2:3b"
+        self.ai_ollama_url: str = (
+            os.environ.get("TFG_AI_OLLAMA_URL", "http://127.0.0.1:11434").strip()
+            or "http://127.0.0.1:11434"
+        )
+        self.ai_timeout_sec: int = _parse_int_env("TFG_AI_TIMEOUT_SEC", 30, minimum=1)
+        self.ai_include_snippet: bool = _parse_bool_env("TFG_AI_INCLUDE_SNIPPET", False)
         _local_root = os.environ.get("TFG_LOCAL_ANALYSIS_ROOT", "").strip()
         self.local_analysis_root: Path | None = (
             Path(_local_root).resolve() if _local_root else None
