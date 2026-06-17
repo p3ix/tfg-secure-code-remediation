@@ -489,6 +489,10 @@ def ai_status() -> dict:
     s = get_settings()
     return {
         "ai_explanations_enabled": s.ai_explanations_enabled,
+        "ai_provider": s.ai_provider,
+        "ai_model": s.ai_model,
+        "ai_include_snippet": s.ai_include_snippet,
+        "ai_timeout_sec": s.ai_timeout_sec,
         "git_clone_enabled": s.enable_git_clone,
         "local_analysis_root_configured": s.local_analysis_root is not None,
         "local_path_enabled": s.enable_local_path and s.local_analysis_root is not None,

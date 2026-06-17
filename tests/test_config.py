@@ -56,3 +56,43 @@ def test_settings_zip_and_path_limits_defaults(monkeypatch: pytest.MonkeyPatch) 
         assert s.git_url_max_length == 2048
     finally:
         get_settings.cache_clear()
+
+
+def test_settings_ai_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
+    for var in (
+        "TFG_AI_PROVIDER",
+        "TFG_AI_MODEL",
+        "TFG_AI_OLLAMA_URL",
+        "TFG_AI_TIMEOUT_SEC",
+        "TFG_AI_INCLUDE_SNIPPET",
+    ):
+        monkeypatch.delenv(var, raising=False)
+    get_settings.cache_clear()
+    try:
+        s = Settings()
+        assert s.ai_provider == "ollama"
+        assert s.ai_model == "llama3.2:3b"
+        assert s.ai_ollama_url == "http://127.0.0.1:11434"
+        assert s.ai_timeout_sec == 30
+        assert s.ai_include_snippet is False
+    finally:
+        get_settings.cache_clear()
+
+
+def test_settings_rejects_invalid_ai_provider(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("TFG_AI_PROVIDER", "gemini")
+    get_settings.cache_clear()
+    try:
+        with pytest.raises(ValueError, match="TFG_AI_PROVIDER"):
+            Settings()
+    finally:
+        get_settings.cache_clear()
+
+
+def test_settings_ai_provider_normalized(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("TFG_AI_PROVIDER", "STUB")
+    get_settings.cache_clear()
+    try:
+        assert Settings().ai_provider == "stub"
+    finally:
+        get_settings.cache_clear()
