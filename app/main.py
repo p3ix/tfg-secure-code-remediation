@@ -16,6 +16,7 @@ from pydantic import BaseModel, Field
 from starlette.templating import Jinja2Templates
 
 from app.config import get_settings
+from app.services.ai.factory import get_ai_provider
 from app.services.analysis_service import analyze_fixtures_reports
 from app.services.pipeline_orchestrator import run_mvp_autofix_verification_roundtrip
 from app.services.presentable_scan import (
@@ -143,6 +144,7 @@ def _build_dashboard_scan(
     scan = presentable_from_internal_analysis(
         internal_scan,
         group_equivalent=group_equivalent,
+        ai_provider=get_ai_provider(),
     )
     return filter_presentable_scan(scan, hide_info=hide_info)
 
@@ -538,6 +540,7 @@ def analyze_fixtures_presentable(
         scan = presentable_from_internal_analysis(
             _attach_analysis_id(analyze_fixtures_reports(), analysis_id),
             group_equivalent=group_equivalent,
+            ai_provider=get_ai_provider(),
         )
         return filter_presentable_scan(scan, hide_info=hide_info)
     except FileNotFoundError as exc:
@@ -574,6 +577,7 @@ def run_fixtures_analysis_presentable(
                 analysis_id,
             ),
             group_equivalent=group_equivalent,
+            ai_provider=get_ai_provider(),
         )
         return filter_presentable_scan(scan, hide_info=hide_info)
     except (FileNotFoundError, RuntimeError) as exc:

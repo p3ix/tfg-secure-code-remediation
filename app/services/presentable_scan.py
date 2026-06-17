@@ -4,13 +4,30 @@ from datetime import UTC, datetime
 from typing import Any
 
 from app.models.finding import NormalizedFinding
+from app.services.ai.cache import ExplanationCache, explain_cached
+from app.services.ai.provider import AIProvider
 from app.services.findings_dedup import (
     group_findings_by_equivalence,
     max_severity,
     primary_finding,
 )
 
-SCHEMA_VERSION = "1.0"
+SCHEMA_VERSION = "1.1"
+
+
+def _ai_explanation_for(
+    finding: NormalizedFinding,
+    provider: AIProvider | None,
+    cache: ExplanationCache,
+) -> dict[str, object] | None:
+    """Explicación IA del hallazgo (degradable: None si no hay proveedor o falla)."""
+    if provider is None:
+        return None
+    try:
+        explanation = explain_cached(provider, finding, cache)
+    except Exception:  # noqa: BLE001 - la IA nunca debe tumbar el escaneo
+        return None
+    return explanation.to_dict() if explanation is not None else None
 
 REMEDIATION_MODE_LABELS: dict[str, str] = {
     "autofix_candidate": "Remediación asistida posible (MVP)",
@@ -157,18 +174,24 @@ def build_presentable_scan(
     analysis_id: str | None = None,
     reports: dict[str, str] | None = None,
     group_equivalent: bool = False,
+    ai_provider: AIProvider | None = None,
 ) -> dict[str, Any]:
     """
     JSON estable para vista previa / memoria: sin raw_tool_data, mensajes acotados.
 
     Si group_equivalent=True, agrupa hallazgos con mismo fichero, línea y mvp_category
     y añade `sources` + `group_size` en cada fila.
+
+    Si ai_provider no es None, cada fila incluye `ai_explanation` (ADR-003); en otro
+    caso el campo es None. La generación es degradable y nunca tumba el escaneo.
     """
     from collections import Counter
 
     def _safe_label(value: Any, default: str) -> str:
         text = str(value).strip() if value is not None else ""
         return text or default
+
+    ai_cache = ExplanationCache()
 
     if group_equivalent:
         groups = group_findings_by_equivalence(findings)
@@ -177,15 +200,22 @@ def build_presentable_scan(
         by_mode = Counter(
             _safe_label(primary_finding(g).remediation_mode, "detection_only") for g in groups
         )
-        rows = [_group_to_presentable_row(i + 1, g) for i, g in enumerate(groups)]
+        rows = []
+        for i, g in enumerate(groups):
+            row = _group_to_presentable_row(i + 1, g)
+            row["ai_explanation"] = _ai_explanation_for(
+                primary_finding(g), ai_provider, ai_cache
+            )
+            rows.append(row)
     else:
         by_sev = Counter(_safe_label(f.severity, "unknown") for f in findings)
         by_cat = Counter(_safe_label(f.mvp_category, "unknown") for f in findings)
         by_mode = Counter(_safe_label(f.remediation_mode, "detection_only") for f in findings)
-        rows = [
-            _finding_to_presentable_row(i + 1, f)
-            for i, f in enumerate(findings)
-        ]
+        rows = []
+        for i, f in enumerate(findings):
+            row = _finding_to_presentable_row(i + 1, f)
+            row["ai_explanation"] = _ai_explanation_for(f, ai_provider, ai_cache)
+            rows.append(row)
 
     payload: dict[str, Any] = {
         "schema_version": SCHEMA_VERSION,
@@ -225,6 +255,7 @@ def presentable_from_internal_analysis(
     internal: dict[str, Any],
     *,
     group_equivalent: bool = False,
+    ai_provider: AIProvider | None = None,
 ) -> dict[str, Any]:
     """
     Convierte la respuesta interna de analyze_fixtures_reports / analyze_fixtures_runtime
@@ -259,6 +290,7 @@ def presentable_from_internal_analysis(
         analysis_id=internal.get("analysis_id"),
         reports=reports,
         group_equivalent=group_equivalent,
+        ai_provider=ai_provider,
     )
     if invalid_findings:
         out_meta = dict(out.get("meta") or {})
