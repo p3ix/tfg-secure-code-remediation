@@ -30,6 +30,7 @@ def test_dashboard_renders_html_when_reports_exist() -> None:
     assert "Ruta local permitida (real)" in response.text
     assert "Informes guardados (MVP/demo)" in response.text
     assert "layout--split-scroll" in response.text
+    assert "overflow-wrap: anywhere" in response.text
     assert "schema_version" in response.text or "Total hallazgos" in response.text
 
 

@@ -30,6 +30,7 @@
     * { box-sizing: border-box; }
     body {
       margin: 0;
+      overflow-x: clip;
       font-family: "JetBrains Mono", "Fira Code", "SFMono-Regular", Consolas, monospace;
       background:
         linear-gradient(rgba(111, 255, 214, 0.025) 1px, transparent 1px),
@@ -45,6 +46,7 @@
       width: min(1200px, calc(100vw - 2rem));
       margin: 0 auto;
       padding: 1.25rem 0 2rem;
+      overflow-x: clip;
     }
     .hero {
       display: grid;
@@ -167,6 +169,7 @@
       position: sticky;
       top: 1rem;
       overflow-x: hidden;
+      min-width: 0;
     }
     .side-panel::after {
       content: "";
@@ -178,6 +181,7 @@
     .main-panel {
       padding: 1.15rem;
       overflow-x: hidden;
+      min-width: 0;
     }
     .section-title {
       font-size: 1.15rem;
@@ -227,6 +231,8 @@
     .muted {
       color: var(--muted);
       font-size: 0.88rem;
+      overflow-wrap: anywhere;
+      word-break: break-word;
     }
     .field {
       display: grid;
@@ -266,6 +272,12 @@
     .toggle input {
       margin-top: 0.22rem;
       accent-color: var(--accent);
+      flex-shrink: 0;
+    }
+    .toggle span {
+      min-width: 0;
+      overflow-wrap: anywhere;
+      word-break: break-word;
     }
     .button {
       border: none;
@@ -300,6 +312,8 @@
       border-radius: var(--radius-lg);
       border: 1px solid var(--line);
       background: rgba(255, 255, 255, 0.04);
+      overflow-wrap: anywhere;
+      word-break: break-word;
     }
     .status strong {
       display: block;
@@ -324,9 +338,15 @@
       padding-bottom: 0.9rem;
       border-bottom: 1px solid var(--line);
     }
+    .results-head > div {
+      min-width: 0;
+      flex: 1 1 16rem;
+    }
     .results-head p {
       color: var(--muted);
       max-width: 40rem;
+      overflow-wrap: anywhere;
+      word-break: break-word;
     }
     .pill-row {
       display: flex;
@@ -340,6 +360,9 @@
       background: rgba(255, 255, 255, 0.04);
       font-size: 0.88rem;
       color: var(--muted);
+      max-width: 100%;
+      overflow-wrap: anywhere;
+      word-break: break-word;
     }
     .stats-grid {
       display: grid;
@@ -352,6 +375,7 @@
       border-radius: var(--radius-lg);
       background: rgba(255, 255, 255, 0.04);
       border: 1px solid var(--line);
+      min-width: 0;
     }
     .stat-card h3 {
       font-size: 0.76rem;
@@ -376,6 +400,7 @@
       border-radius: var(--radius-lg);
       border: 1px solid var(--line);
       background: rgba(255, 255, 255, 0.03);
+      min-width: 0;
     }
     .list-card h3 {
       margin-bottom: 0.7rem;
@@ -391,10 +416,14 @@
       justify-content: space-between;
       gap: 1rem;
       color: var(--muted);
+      flex-wrap: wrap;
+      align-items: flex-start;
     }
     .mini-row strong {
       color: var(--ink);
       font-weight: 600;
+      overflow-wrap: anywhere;
+      word-break: break-word;
     }
     .findings {
       display: grid;
@@ -411,7 +440,8 @@
         inset 0 1px 0 rgba(255, 255, 255, 0.02),
         0 16px 30px rgba(0, 0, 0, 0.16);
       position: relative;
-      overflow: hidden;
+      overflow-x: clip;
+      overflow-y: visible;
       transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
     }
     .finding::before {
@@ -443,6 +473,11 @@
       margin-bottom: 0.65rem;
       position: relative;
       z-index: 1;
+      flex-wrap: wrap;
+    }
+    .finding-top > div:first-child {
+      min-width: 0;
+      flex: 1 1 12rem;
     }
     .finding-top h3 {
       font-size: 1.07rem;
@@ -452,6 +487,8 @@
     .finding-top p {
       color: var(--muted);
       font-size: 0.92rem;
+      overflow-wrap: anywhere;
+      word-break: break-word;
     }
     .badges {
       display: flex;
@@ -459,6 +496,8 @@
       gap: 0.45rem;
       justify-content: flex-end;
       align-items: center;
+      max-width: 100%;
+      flex: 1 1 auto;
     }
     .badge {
       display: inline-flex;
@@ -469,6 +508,9 @@
       border: 1px solid var(--line);
       background: rgba(255, 255, 255, 0.05);
       backdrop-filter: blur(4px);
+      max-width: 100%;
+      overflow-wrap: anywhere;
+      word-break: break-word;
     }
     .sev-high { color: var(--sev-high); border-color: rgba(184, 79, 79, 0.28); }
     .sev-medium { color: var(--sev-medium); border-color: rgba(186, 123, 31, 0.28); }
@@ -487,6 +529,7 @@
       margin-bottom: 0.8rem;
       position: relative;
       z-index: 1;
+      min-width: 0;
     }
     .meta-box {
       padding: 0.75rem 0.8rem;
@@ -494,6 +537,9 @@
       background: rgba(255, 255, 255, 0.03);
       border: 1px solid var(--line);
       box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02);
+      min-width: 0;
+      overflow-wrap: anywhere;
+      word-break: break-word;
     }
     .meta-box .label {
       display: block;
@@ -508,6 +554,8 @@
       border-radius: 6px;
       background: rgba(255, 255, 255, 0.06);
       font-size: 0.88em;
+      overflow-wrap: anywhere;
+      word-break: break-word;
     }
     .source-list {
       display: flex;
@@ -524,15 +572,19 @@
       border-radius: 999px;
       border: 1px solid var(--line);
       background: rgba(255, 255, 255, 0.04);
+      max-width: 100%;
+      overflow-wrap: anywhere;
+      word-break: break-word;
     }
     .finding-message {
       color: var(--muted);
       font-size: 0.94rem;
       margin-bottom: 0.7rem;
+      overflow-wrap: anywhere;
       word-break: break-word;
       position: relative;
       z-index: 1;
-      max-width: 70ch;
+      max-width: 100%;
     }
     .ai-explanation {
       margin: 0.4rem 0 0.8rem;
@@ -580,13 +632,17 @@
       margin: 0 0 0.3rem;
       font-size: 0.92rem;
       color: #e9f4ff;
-      max-width: 72ch;
+      max-width: 100%;
+      overflow-wrap: anywhere;
+      word-break: break-word;
     }
     .ai-disclaimer {
       margin-top: 0.5rem;
       font-size: 0.74rem;
       color: var(--muted);
       font-style: italic;
+      overflow-wrap: anywhere;
+      word-break: break-word;
     }
     .empty {
       padding: 2rem 1rem;
@@ -617,6 +673,8 @@
       border-radius: var(--radius-md);
       border: 1px solid var(--line);
       background: rgba(255, 255, 255, 0.03);
+      min-width: 0;
+      overflow-x: clip;
     }
     .tool-card-head {
       display: flex;
@@ -655,7 +713,9 @@
       font-size: 0.75rem;
       overflow-x: auto;
       white-space: pre-wrap;
+      overflow-wrap: anywhere;
       word-break: break-word;
+      max-width: 100%;
     }
     a {
       color: var(--accent);
@@ -674,11 +734,35 @@
         font-size: clamp(1.9rem, 8vw, 3rem);
         line-height: 1.06;
       }
+      .hero-copy,
+      .section-copy {
+        overflow-wrap: anywhere;
+        word-break: break-word;
+      }
+      .results-head p {
+        max-width: 100%;
+      }
+      .split-grid,
+      .tool-diagnostics-grid,
+      .stats-grid {
+        grid-template-columns: 1fr;
+      }
+      .finding-grid {
+        grid-template-columns: 1fr;
+      }
       .finding-top {
         flex-direction: column;
       }
       .badges {
         justify-content: flex-start;
+        width: 100%;
+      }
+      .mini-row {
+        flex-direction: column;
+        gap: 0.25rem;
+      }
+      .pill-row {
+        width: 100%;
       }
     }
   </style>
