@@ -266,7 +266,33 @@ def test_dashboard_analyze_git_clone_disabled(monkeypatch) -> None:
         get_settings.cache_clear()
 
 
-def test_dashboard_renders_ai_explanation_when_enabled(monkeypatch) -> None:
+def test_dashboard_renders_ai_explanation_when_user_opts_in(monkeypatch) -> None:
+    from app.config import get_settings
+
+    bandit = Path("reports/bandit/fixtures-mvp-bandit.json")
+    semgrep = Path("reports/semgrep/fixtures-mvp-semgrep.json")
+    if not bandit.exists() or not semgrep.exists():
+        return
+
+    monkeypatch.setenv("TFG_AI_EXPLANATIONS_ENABLED", "1")
+    monkeypatch.setenv("TFG_AI_PROVIDER", "stub")
+    get_settings.cache_clear()
+    try:
+        response = client.post(
+            "/dashboard/analyze",
+            data={
+                "analysis_mode": "fixture_reports",
+                "enable_ai_explanations": "true",
+            },
+        )
+        assert response.status_code == 200
+        assert "Explicación IA" in response.text
+        assert "Explicación generada por IA" in response.text
+    finally:
+        get_settings.cache_clear()
+
+
+def test_dashboard_skips_ai_on_load_even_when_env_enabled(monkeypatch) -> None:
     from app.config import get_settings
 
     bandit = Path("reports/bandit/fixtures-mvp-bandit.json")
@@ -280,8 +306,8 @@ def test_dashboard_renders_ai_explanation_when_enabled(monkeypatch) -> None:
     try:
         response = client.get("/dashboard")
         assert response.status_code == 200
-        assert "Explicación IA" in response.text
-        assert "Explicación generada por IA" in response.text
+        assert "Incluir explicaciones IA" in response.text
+        assert "Explicación IA" not in response.text
     finally:
         get_settings.cache_clear()
 
