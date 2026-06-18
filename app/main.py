@@ -174,6 +174,8 @@ def _render_dashboard(
     enable_ai_explanations: bool = False,
     analysis_error: str | None = None,
     analysis_notice: str | None = None,
+    local_path_value: str = "",
+    git_url_value: str = "",
 ) -> HTMLResponse:
     settings = get_settings()
     return templates.TemplateResponse(
@@ -199,6 +201,8 @@ def _render_dashboard(
             "git_clone_enabled": settings.enable_git_clone,
             "git_allowed_hosts": ", ".join(sorted(settings.git_allowed_hosts)),
             "zip_max_bytes": settings.zip_max_bytes,
+            "local_path_value": local_path_value,
+            "git_url_value": git_url_value,
         },
     )
 
@@ -333,6 +337,8 @@ async def dashboard_analyze(
             group_equivalent=group_equivalent,
             analysis_mode=analysis_mode,
             enable_ai_explanations=enable_ai_explanations,
+            local_path_value=local_path,
+            git_url_value=git_url,
         )
     except (FileNotFoundError, PermissionError, RuntimeError, ValueError, PayloadTooLargeError) as exc:
         _, code, msg = _map_analysis_error(exc, analysis_mode=analysis_mode)
@@ -351,6 +357,8 @@ async def dashboard_analyze(
             analysis_mode=analysis_mode,
             enable_ai_explanations=enable_ai_explanations,
             analysis_error=f"[{code}] {msg} (analysis_id={analysis_id})",
+            local_path_value=local_path,
+            git_url_value=git_url,
         )
 
 @app.get("/health")
