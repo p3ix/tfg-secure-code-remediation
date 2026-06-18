@@ -133,6 +133,27 @@
       margin-top: 1.25rem;
       align-items: start;
     }
+    /* Escritorio: scroll independiente sidebar / resultados (WEB-2) */
+    @media (min-width: 901px) {
+      .layout.layout--split-scroll {
+        align-items: stretch;
+        height: calc(100dvh - 11.5rem);
+        min-height: 22rem;
+        max-height: calc(100dvh - 6rem);
+      }
+      .layout.layout--split-scroll .side-panel,
+      .layout.layout--split-scroll .main-panel {
+        min-height: 0;
+        max-height: 100%;
+        overflow-x: hidden;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+      }
+      .layout.layout--split-scroll .side-panel {
+        position: relative;
+        top: auto;
+      }
+    }
     .panel {
       border: 1px solid var(--line);
       border-radius: var(--radius-xl);
@@ -145,7 +166,7 @@
       padding: 1.15rem;
       position: sticky;
       top: 1rem;
-      overflow: hidden;
+      overflow-x: hidden;
     }
     .side-panel::after {
       content: "";
@@ -156,7 +177,7 @@
     }
     .main-panel {
       padding: 1.15rem;
-      overflow: hidden;
+      overflow-x: hidden;
     }
     .section-title {
       font-size: 1.15rem;
@@ -680,7 +701,7 @@
       </div>
     </section>
 
-    <div class="layout">
+    <div class="layout layout--split-scroll">
       <aside class="panel side-panel">
         <h2 class="section-title">Nuevo análisis</h2>
         <p class="section-copy">
