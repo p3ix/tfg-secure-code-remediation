@@ -31,6 +31,8 @@ def test_dashboard_renders_html_when_reports_exist() -> None:
     assert "Informes guardados (MVP/demo)" in response.text
     assert "layout--split-scroll" in response.text
     assert "overflow-wrap: anywhere" in response.text
+    assert "dashboard-analyze-form" in response.text
+    assert 'data-loading-label="Analizando…"' in response.text
     assert "schema_version" in response.text or "Total hallazgos" in response.text
 
 
@@ -207,6 +209,7 @@ def test_dashboard_analyze_local_path_error_is_rendered(monkeypatch) -> None:
     assert response.status_code == 200
     assert "No se pudo completar el análisis" in response.text
     assert "ruta local" in response.text.lower()
+    assert 'value="demo-project"' in response.text
 
 
 def test_dashboard_analyze_git_clone_success(monkeypatch) -> None:
@@ -264,6 +267,7 @@ def test_dashboard_analyze_git_clone_disabled(monkeypatch) -> None:
         assert response.status_code == 200
         assert "[GIT_CLONE_DISABLED]" in response.text
         assert "git clone está desactivado" in response.text
+        assert 'value="https://github.com/octocat/Hello-World.git"' in response.text
     finally:
         get_settings.cache_clear()
 

@@ -279,6 +279,28 @@
       overflow-wrap: anywhere;
       word-break: break-word;
     }
+    .form-status {
+      margin: 0;
+      padding: 0.75rem 0.9rem;
+      border-radius: var(--radius-md);
+      border: 1px solid rgba(13, 108, 99, 0.28);
+      background: var(--accent-soft);
+      color: var(--ink);
+      font-size: 0.9rem;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+    .form-hint--ai {
+      margin: 0;
+      padding: 0.65rem 0.8rem;
+      border-radius: var(--radius-md);
+      border: 1px dashed rgba(124, 196, 255, 0.35);
+      background: rgba(124, 196, 255, 0.06);
+      color: var(--muted);
+      font-size: 0.86rem;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
     .button {
       border: none;
       border-radius: 999px;
@@ -294,6 +316,18 @@
     }
     .button:hover {
       filter: brightness(0.98);
+    }
+    .button:disabled,
+    .button.is-loading {
+      cursor: wait;
+      opacity: 0.82;
+      filter: none;
+      box-shadow: none;
+    }
+    .button:disabled::after,
+    .button.is-loading::after {
+      animation: none;
+      opacity: 0;
     }
     .button::after {
       content: "";
@@ -792,7 +826,13 @@
           Lanza un escaneo desde la web y renderiza el resultado en esta misma página.
         </p>
 
-        <form class="stack" method="post" action="/dashboard/analyze" enctype="multipart/form-data">
+        <form
+          id="dashboard-analyze-form"
+          class="stack"
+          method="post"
+          action="/dashboard/analyze"
+          enctype="multipart/form-data"
+        >
           <div class="mode-grid">
             <label class="mode-option{% if analysis_mode == 'upload_zip' %} active{% endif %}">
               <div class="mode-head">
@@ -857,13 +897,13 @@
 
           <div class="field">
             <label for="local_path">Ruta relativa</label>
-            <input id="local_path" type="text" name="local_path" placeholder="mi-proyecto" />
+            <input id="local_path" type="text" name="local_path" placeholder="mi-proyecto" value="{{ local_path_value|e }}" />
             <div class="field-help">Solo se usa para análisis bajo la raíz local configurada.</div>
           </div>
 
           <div class="field">
             <label for="git_url">URL Git HTTPS</label>
-            <input id="git_url" type="text" name="git_url" placeholder="https://github.com/org/repo.git" />
+            <input id="git_url" type="text" name="git_url" placeholder="https://github.com/org/repo.git" value="{{ git_url_value|e }}" />
             <div class="field-help">Solo se usa cuando seleccionas "Clonar repositorio Git".</div>
           </div>
 
@@ -892,11 +932,25 @@
                   <span class="muted">Opcional. Puede tardar (proveedor: <code>{{ ai_provider_label }}</code>). Sin marcar, el análisis es inmediato.</span>
                 </span>
               </label>
+              <p class="form-hint form-hint--ai" id="ai-duration-hint" hidden>
+                Con IA activada, el análisis puede tardar varios segundos por hallazgo según el proveedor
+                (<code>{{ ai_provider_label }}</code>). El botón quedará deshabilitado hasta que termine la petición.
+              </p>
               {% endif %}
             </div>
           </div>
 
-          <button class="button" type="submit">Lanzar análisis</button>
+          <p class="form-status" id="analyze-form-status" role="status" aria-live="polite" hidden></p>
+
+          <button
+            class="button"
+            type="submit"
+            id="analyze-submit"
+            data-default-label="Lanzar análisis"
+            data-loading-label="Analizando…"
+          >
+            Lanzar análisis
+          </button>
         </form>
       </aside>
 
@@ -1099,5 +1153,46 @@
       </main>
     </div>
   </div>
+  <script>
+    (function () {
+      const form = document.getElementById("dashboard-analyze-form");
+      if (!form) return;
+
+      const submit = document.getElementById("analyze-submit");
+      const status = document.getElementById("analyze-form-status");
+      const aiCheckbox = form.querySelector('input[name="enable_ai_explanations"]');
+      const aiHint = document.getElementById("ai-duration-hint");
+
+      function syncAiHint() {
+        if (!aiHint || !aiCheckbox) return;
+        aiHint.hidden = !aiCheckbox.checked;
+      }
+
+      if (aiCheckbox) {
+        aiCheckbox.addEventListener("change", syncAiHint);
+        syncAiHint();
+      }
+
+      form.addEventListener("submit", function () {
+        if (!submit || submit.disabled) return;
+
+        submit.disabled = true;
+        submit.setAttribute("aria-busy", "true");
+        submit.classList.add("is-loading");
+        submit.textContent = submit.dataset.loadingLabel || "Analizando…";
+
+        if (status) {
+          status.hidden = false;
+          let message = "Analizando código…";
+          if (aiCheckbox && aiCheckbox.checked) {
+            message += " Incluye explicaciones IA; puede tardar más de lo habitual.";
+          }
+          status.textContent = message;
+        }
+
+        form.setAttribute("aria-busy", "true");
+      });
+    })();
+  </script>
 </body>
 </html>
