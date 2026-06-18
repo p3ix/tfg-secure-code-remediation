@@ -17,6 +17,7 @@ from starlette.templating import Jinja2Templates
 
 from app.config import get_settings
 from app.services.ai.factory import get_ai_provider
+from app.services.ai.provider import AIProvider
 from app.services.analysis_service import analyze_fixtures_reports
 from app.services.pipeline_orchestrator import run_mvp_autofix_verification_roundtrip
 from app.services.presentable_scan import (
@@ -135,16 +136,30 @@ def _log_event(event: str, *, analysis_id: str, **fields: object) -> None:
     logger.info("event=%s analysis_id=%s payload=%s", event, analysis_id, fields)
 
 
+def _resolve_ai_provider(*, user_requested: bool) -> AIProvider | None:
+    """
+    Devuelve el proveedor IA solo si el usuario lo pidió y la capa está habilitada
+    en el servidor. Evita llamadas a Ollama al abrir el dashboard por defecto.
+    """
+    if not user_requested:
+        return None
+    settings = get_settings()
+    if not settings.ai_explanations_enabled:
+        return None
+    return get_ai_provider(settings)
+
+
 def _build_dashboard_scan(
     internal_scan: dict,
     *,
     hide_info: bool,
     group_equivalent: bool,
+    enable_ai_explanations: bool = False,
 ) -> dict:
     scan = presentable_from_internal_analysis(
         internal_scan,
         group_equivalent=group_equivalent,
-        ai_provider=get_ai_provider(),
+        ai_provider=_resolve_ai_provider(user_requested=enable_ai_explanations),
     )
     return filter_presentable_scan(scan, hide_info=hide_info)
 
@@ -156,6 +171,7 @@ def _render_dashboard(
     hide_info: bool,
     group_equivalent: bool,
     analysis_mode: str,
+    enable_ai_explanations: bool = False,
     analysis_error: str | None = None,
     analysis_notice: str | None = None,
 ) -> HTMLResponse:
@@ -168,6 +184,9 @@ def _render_dashboard(
             "scan": scan,
             "hide_info": hide_info,
             "group_equivalent": group_equivalent,
+            "enable_ai_explanations": enable_ai_explanations,
+            "ai_explanations_available": settings.ai_explanations_enabled,
+            "ai_provider_label": settings.ai_provider,
             "analysis_mode": analysis_mode,
             "analysis_error": analysis_error,
             "analysis_notice": analysis_notice,
@@ -234,6 +253,7 @@ async def dashboard_analyze(
     analysis_mode: str = Form(...),
     hide_info: bool = Form(False),
     group_equivalent: bool = Form(False),
+    enable_ai_explanations: bool = Form(False),
     local_path: str = Form(""),
     git_url: str = Form(""),
     file: UploadFile | None = File(default=None),
@@ -304,6 +324,7 @@ async def dashboard_analyze(
             internal,
             hide_info=hide_info,
             group_equivalent=group_equivalent,
+            enable_ai_explanations=enable_ai_explanations,
         )
         return _render_dashboard(
             request,
@@ -311,6 +332,7 @@ async def dashboard_analyze(
             hide_info=hide_info,
             group_equivalent=group_equivalent,
             analysis_mode=analysis_mode,
+            enable_ai_explanations=enable_ai_explanations,
         )
     except (FileNotFoundError, PermissionError, RuntimeError, ValueError, PayloadTooLargeError) as exc:
         _, code, msg = _map_analysis_error(exc, analysis_mode=analysis_mode)
@@ -327,6 +349,7 @@ async def dashboard_analyze(
             hide_info=hide_info,
             group_equivalent=group_equivalent,
             analysis_mode=analysis_mode,
+            enable_ai_explanations=enable_ai_explanations,
             analysis_error=f"[{code}] {msg} (analysis_id={analysis_id})",
         )
 
@@ -533,6 +556,10 @@ def analyze_fixtures_presentable(
         default=False,
         description="Agrupa hallazgos equivalentes (mismo fichero, línea y categoría MVP).",
     ),
+    enable_ai: bool = Query(
+        default=False,
+        description="Genera explicaciones IA por hallazgo (requiere capa habilitada).",
+    ),
 ) -> dict:
     """Vista JSON orientada a presentación (sin datos crudos de herramienta)."""
     analysis_id = _new_analysis_id()
@@ -540,7 +567,7 @@ def analyze_fixtures_presentable(
         scan = presentable_from_internal_analysis(
             _attach_analysis_id(analyze_fixtures_reports(), analysis_id),
             group_equivalent=group_equivalent,
-            ai_provider=get_ai_provider(),
+            ai_provider=_resolve_ai_provider(user_requested=enable_ai),
         )
         return filter_presentable_scan(scan, hide_info=hide_info)
     except FileNotFoundError as exc:
@@ -567,6 +594,10 @@ def run_fixtures_analysis_presentable(
         default=False,
         description="Agrupa hallazgos equivalentes (mismo fichero, línea y categoría MVP).",
     ),
+    enable_ai: bool = Query(
+        default=False,
+        description="Genera explicaciones IA por hallazgo (requiere capa habilitada).",
+    ),
 ) -> dict:
     """Mismo escaneo que /analysis/run-fixtures, respuesta presentable."""
     analysis_id = _new_analysis_id()
@@ -577,7 +608,7 @@ def run_fixtures_analysis_presentable(
                 analysis_id,
             ),
             group_equivalent=group_equivalent,
-            ai_provider=get_ai_provider(),
+            ai_provider=_resolve_ai_provider(user_requested=enable_ai),
         )
         return filter_presentable_scan(scan, hide_info=hide_info)
     except (FileNotFoundError, RuntimeError) as exc:

@@ -779,6 +779,15 @@
                   <span class="muted">Fusiona filas con mismo fichero, línea y categoría MVP.</span>
                 </span>
               </label>
+              {% if ai_explanations_available %}
+              <label class="toggle">
+                <input type="checkbox" name="enable_ai_explanations" value="true" {% if enable_ai_explanations %}checked{% endif %} />
+                <span>
+                  <strong>Incluir explicaciones IA</strong><br />
+                  <span class="muted">Opcional. Puede tardar (proveedor: <code>{{ ai_provider_label }}</code>). Sin marcar, el análisis es inmediato.</span>
+                </span>
+              </label>
+              {% endif %}
             </div>
           </div>
 
