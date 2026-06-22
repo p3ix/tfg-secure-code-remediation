@@ -8,12 +8,14 @@ mide la calidad del texto generado, no la detección (que la aportan Bandit/Semg
 ## Metodología
 
 - **Entrada**: cada hallazgo normalizado del corpus MVP (categoría, regla, CWE/OWASP,
-  severidad, mensaje). El `code_snippet` solo se envía si `TFG_AI_INCLUDE_SNIPPET=1`.
+  severidad, mensaje, fichero/línea). El `code_focus` se deriva del parser (`code_snippet`
+  o mensaje); el modelo no es la única fuente de contexto. El snippet completo solo se envía
+  a Ollama si `TFG_AI_INCLUDE_SNIPPET=1`.
 - **Proveedores comparados**:
   - `stub` — línea base determinista, sin red (tests/CI y demo offline).
   - `ollama` — modelo local recomendado (p. ej. `llama3.2:3b`), reproducible en la máquina.
-- **Trazabilidad**: cada explicación registra `provider`, `model`, `prompt_version` y
-  `prompt_hash`, de modo que un resultado puntuado puede reproducirse con la misma versión
+- **Trazabilidad**: cada explicación registra `provider`, `model`, `prompt_version` (**v3**)
+  y `prompt_hash`, de modo que un resultado puntuado puede reproducirse con la misma versión
   de prompt.
 - **Revisión**: humana (autor del TFG), una pasada por categoría.
 
@@ -41,25 +43,26 @@ TFG_AI_EXPLANATIONS_ENABLED=1 TFG_AI_PROVIDER=ollama TFG_AI_MODEL=llama3.2:3b \
   uvicorn app.main:app --reload
 ```
 
-## Resultados — línea base `stub` (determinista)
+## Resultados — línea base `stub` (determinista, prompt v3)
 
-La línea base se incluye porque es reproducible en CI y sirve de referencia mínima. Por
-construcción es correcta y sin alucinación, pero **genérica** (no analiza el caso concreto),
-de ahí su menor puntuación pedagógica.
+Tras **IA-8**, el stub incluye `location_hint`, `code_focus` (desde el hallazgo) y
+`action_steps` por categoría MVP. Sigue siendo determinista y sin alucinación; la pedagogía
+mejora respecto a v2 al anclar la explicación a fichero/línea y pasos concretos.
 
 | Categoría MVP | Resumen (stub) | Correctitud | Pedagogía | No alucinación | Total |
 |---------------|----------------|:-----------:|:---------:|:--------------:|:-----:|
-| command_injection | Ejecución de comandos con entrada no confiable | 2 | 1 | 2 | 5 |
-| yaml_load | Deserialización insegura de YAML | 2 | 1 | 2 | 5 |
-| flask_debug | Flask con modo debug activado | 2 | 1 | 2 | 5 |
-| requests_timeout | Petición HTTP sin timeout | 2 | 1 | 2 | 5 |
-| verify_false | Verificación TLS desactivada | 2 | 1 | 2 | 5 |
+| command_injection | Ejecución de comandos con entrada no confiable | 2 | 2 | 2 | 6 |
+| yaml_load | Deserialización insegura de YAML | 2 | 2 | 2 | 6 |
+| flask_debug | Flask con modo debug activado | 2 | 2 | 2 | 6 |
+| requests_timeout | Petición HTTP sin timeout | 2 | 2 | 2 | 6 |
+| verify_false | Verificación TLS desactivada | 2 | 2 | 2 | 6 |
 
-## Resultados — `ollama` (modelo local)
+## Resultados — `ollama` (modelo local, prompt v3)
 
 > Pendiente de rellenar ejecutando el modelo local en la máquina de desarrollo
 > (el sandbox de CI no tiene Ollama). Se puntúa con la rúbrica anterior; se anota
-> `model` y `prompt_version` usados para trazabilidad.
+> `model` y `prompt_version` usados para trazabilidad. Se espera pedagogía ≥ stub v3
+> al contextualizar con fichero/línea y pasos generados.
 
 | Categoría MVP | Modelo | Correctitud | Pedagogía | No alucinación | Total | Observaciones |
 |---------------|--------|:-----------:|:---------:|:--------------:|:-----:|---------------|
@@ -71,10 +74,10 @@ de ahí su menor puntuación pedagógica.
 
 ## Conclusión (provisional)
 
-- La línea base `stub` garantiza una explicación correcta y reproducible, pero genérica:
-  su valor es servir de red de seguridad offline y de contrato estable.
-- El modelo local `ollama` debe aportar la **utilidad pedagógica** (explicar el caso
-  concreto). La comparación stub vs ollama es el material de evaluación del TFG.
+- El **stub v3** (IA-8) garantiza explicación correcta, ubicación explícita y pasos de
+  remediación reproducibles offline; puntuación pedagógica 2 en todas las categorías MVP.
+- El modelo local `ollama` con **prompt v3** debe aportar utilidad pedagógica adicional
+  sobre casos concretos. La comparación stub vs ollama es el material de evaluación del TFG.
 - En todos los casos la IA es **complemento**: la verificación de que el problema existe y
   de que la remediación funciona la siguen aportando Bandit/Semgrep y los remediadores
   deterministas.

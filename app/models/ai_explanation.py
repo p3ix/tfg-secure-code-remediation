@@ -11,6 +11,9 @@ class AIExplanation:
     No contiene parches de código: solo texto educativo y una sugerencia de
     remediación en lenguaje natural. La remediación verificada sigue siendo
     responsabilidad de los remediators deterministas.
+
+    `location_hint` y `code_focus` se derivan del hallazgo normalizado (parser),
+    no del modelo. `action_steps` aporta pasos concretos de remediación.
     """
 
     summary: str
@@ -21,6 +24,9 @@ class AIExplanation:
     prompt_version: str
     prompt_hash: str | None = None
     cached: bool = False
+    location_hint: str | None = None
+    code_focus: str | None = None
+    action_steps: list[str] | None = None
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -32,4 +38,7 @@ class AIExplanation:
             "prompt_version": self.prompt_version,
             "prompt_hash": self.prompt_hash,
             "cached": self.cached,
+            "location_hint": self.location_hint,
+            "code_focus": self.code_focus,
+            "action_steps": list(self.action_steps) if self.action_steps else [],
         }

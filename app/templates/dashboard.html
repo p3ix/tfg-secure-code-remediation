@@ -329,6 +329,25 @@
       animation: none;
       opacity: 0;
     }
+    .button--secondary {
+      background: rgba(255, 255, 255, 0.08);
+      color: #e9f4ff;
+      border: 1px solid rgba(124, 196, 255, 0.35);
+      box-shadow: none;
+    }
+    .button--secondary:hover {
+      background: rgba(124, 196, 255, 0.12);
+      filter: none;
+    }
+    .enrich-ai-bar {
+      display: grid;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+      padding: 0.9rem 1rem;
+      border-radius: var(--radius-lg);
+      border: 1px solid rgba(124, 196, 255, 0.28);
+      background: rgba(124, 196, 255, 0.05);
+    }
     .button::after {
       content: "";
       position: absolute;
@@ -670,6 +689,29 @@
       overflow-wrap: anywhere;
       word-break: break-word;
     }
+    .ai-code-focus {
+      margin: 0;
+      padding: 0.55rem 0.65rem;
+      border-radius: var(--radius-sm);
+      background: rgba(0, 0, 0, 0.28);
+      font-size: 0.82rem;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+      max-width: 100%;
+    }
+    .ai-steps {
+      margin: 0;
+      padding-left: 1.15rem;
+      display: grid;
+      gap: 0.35rem;
+    }
+    .ai-steps li {
+      color: #e9f4ff;
+      font-size: 0.9rem;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
     .ai-disclaimer {
       margin-top: 0.5rem;
       font-size: 0.74rem;
@@ -987,6 +1029,40 @@
           </div>
         </div>
 
+        {% if can_enrich_with_ai %}
+        <form
+          id="dashboard-enrich-form"
+          class="enrich-ai-bar"
+          method="post"
+          action="/dashboard/enrich-ai"
+        >
+          <input type="hidden" name="analysis_id" value="{{ scan.meta.analysis_id }}" />
+          <input type="hidden" name="analysis_mode" value="{{ analysis_mode }}" />
+          <input type="hidden" name="hide_info" value="{{ 'true' if hide_info else 'false' }}" />
+          <input
+            type="hidden"
+            name="group_equivalent"
+            value="{{ 'true' if group_equivalent else 'false' }}"
+          />
+          <p class="form-hint form-hint--ai" style="margin: 0;">
+            Este resultado se analizó sin IA. Puedes generar explicaciones sin repetir
+            Bandit/Semgrep (proveedor: <code>{{ ai_provider_label }}</code>).
+            {% if ai_provider_label == 'ollama' %}
+            Puede tardar varios segundos por hallazgo.
+            {% endif %}
+          </p>
+          <p class="form-status" id="enrich-form-status" role="status" aria-live="polite" hidden></p>
+          <button
+            class="button button--secondary"
+            type="submit"
+            id="enrich-submit"
+            data-loading-label="Generando explicaciones IA…"
+          >
+            Añadir explicaciones IA a este resultado
+          </button>
+        </form>
+        {% endif %}
+
         <div class="stats-grid">
           <article class="stat-card">
             <h3>Total hallazgos</h3>
@@ -1106,12 +1182,30 @@
                 </span>
               </div>
               <dl>
+                {% if row.ai_explanation.location_hint %}
+                <dt>Ubicación</dt>
+                <dd><code>{{ row.ai_explanation.location_hint }}</code></dd>
+                {% endif %}
+                {% if row.ai_explanation.code_focus %}
+                <dt>Fragmento relevante</dt>
+                <dd><pre class="ai-code-focus">{{ row.ai_explanation.code_focus }}</pre></dd>
+                {% endif %}
                 <dt>Resumen</dt>
                 <dd>{{ row.ai_explanation.summary }}</dd>
                 <dt>Riesgo</dt>
                 <dd>{{ row.ai_explanation.risk }}</dd>
                 <dt>Sugerencia</dt>
                 <dd>{{ row.ai_explanation.suggestion }}</dd>
+                {% if row.ai_explanation.action_steps %}
+                <dt>Pasos sugeridos</dt>
+                <dd>
+                  <ol class="ai-steps">
+                    {% for step in row.ai_explanation.action_steps %}
+                    <li>{{ step }}</li>
+                    {% endfor %}
+                  </ol>
+                </dd>
+                {% endif %}
               </dl>
               <p class="ai-disclaimer">
                 Explicación generada por IA; puede contener errores. La verificación la
@@ -1155,12 +1249,40 @@
   </div>
   <script>
     (function () {
-      const form = document.getElementById("dashboard-analyze-form");
-      if (!form) return;
+      function wireFormLoading(form, submit, status, defaultLoadingMessage) {
+        if (!form || !submit) return;
 
-      const submit = document.getElementById("analyze-submit");
-      const status = document.getElementById("analyze-form-status");
-      const aiCheckbox = form.querySelector('input[name="enable_ai_explanations"]');
+        const aiCheckbox = document
+          .getElementById("dashboard-analyze-form")
+          ?.querySelector('input[name="enable_ai_explanations"]');
+
+        form.addEventListener("submit", function () {
+          if (submit.disabled) return;
+
+          submit.disabled = true;
+          submit.setAttribute("aria-busy", "true");
+          submit.classList.add("is-loading");
+          if (submit.dataset.loadingLabel) {
+            submit.textContent = submit.dataset.loadingLabel;
+          }
+
+          if (status) {
+            status.hidden = false;
+            let message = defaultLoadingMessage;
+            if (form.id === "dashboard-analyze-form" && aiCheckbox && aiCheckbox.checked) {
+              message += " Incluye explicaciones IA; puede tardar más de lo habitual.";
+            }
+            status.textContent = message;
+          }
+
+          form.setAttribute("aria-busy", "true");
+        });
+      }
+
+      const analyzeForm = document.getElementById("dashboard-analyze-form");
+      const analyzeSubmit = document.getElementById("analyze-submit");
+      const analyzeStatus = document.getElementById("analyze-form-status");
+      const aiCheckbox = analyzeForm?.querySelector('input[name="enable_ai_explanations"]');
       const aiHint = document.getElementById("ai-duration-hint");
 
       function syncAiHint() {
@@ -1173,25 +1295,19 @@
         syncAiHint();
       }
 
-      form.addEventListener("submit", function () {
-        if (!submit || submit.disabled) return;
+      wireFormLoading(
+        analyzeForm,
+        analyzeSubmit,
+        analyzeStatus,
+        "Analizando código…"
+      );
 
-        submit.disabled = true;
-        submit.setAttribute("aria-busy", "true");
-        submit.classList.add("is-loading");
-        submit.textContent = submit.dataset.loadingLabel || "Analizando…";
-
-        if (status) {
-          status.hidden = false;
-          let message = "Analizando código…";
-          if (aiCheckbox && aiCheckbox.checked) {
-            message += " Incluye explicaciones IA; puede tardar más de lo habitual.";
-          }
-          status.textContent = message;
-        }
-
-        form.setAttribute("aria-busy", "true");
-      });
+      wireFormLoading(
+        document.getElementById("dashboard-enrich-form"),
+        document.getElementById("enrich-submit"),
+        document.getElementById("enrich-form-status"),
+        "Generando explicaciones IA…"
+      );
     })();
   </script>
 </body>

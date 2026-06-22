@@ -293,6 +293,8 @@ def test_dashboard_renders_ai_explanation_when_user_opts_in(monkeypatch) -> None
         )
         assert response.status_code == 200
         assert "Explicación IA" in response.text
+        assert "Ubicación" in response.text
+        assert "Pasos sugeridos" in response.text
         assert "Explicación generada por IA" in response.text
     finally:
         get_settings.cache_clear()

@@ -56,6 +56,8 @@ def test_presentable_with_stub_provider_adds_explanation() -> None:
     assert first["provider"] == "stub"
     assert "comando" in first["summary"].lower()
     assert first["suggestion"]
+    assert first["location_hint"] == "app.py:1"
+    assert first["action_steps"]
 
 
 def test_presentable_grouped_with_stub_provider() -> None:

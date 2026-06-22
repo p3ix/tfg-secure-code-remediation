@@ -81,6 +81,42 @@ def test_explain_cached_stores_per_key() -> None:
     assert len(cache) == 2
 
 
+def test_explain_cached_reapplies_location_on_hit() -> None:
+    provider = StubProvider()
+    cache = ExplanationCache()
+    first_finding = NormalizedFinding(
+        source_tool="bandit",
+        source_rule_id="B602",
+        file_path="a.py",
+        line_start=1,
+        raw_message="shell=True",
+        severity="high",
+        mvp_category="command_injection",
+        candidate_for_remediation=True,
+        remediation_mode="autofix_candidate",
+        cwe_id=78,
+    )
+    second_finding = NormalizedFinding(
+        source_tool="bandit",
+        source_rule_id="B602",
+        file_path="b.py",
+        line_start=9,
+        raw_message="shell=True",
+        severity="high",
+        mvp_category="command_injection",
+        candidate_for_remediation=True,
+        remediation_mode="autofix_candidate",
+        cwe_id=78,
+    )
+    first = explain_cached(provider, first_finding, cache)
+    second = explain_cached(provider, second_finding, cache)
+
+    assert first is not None and second is not None
+    assert first.location_hint == "a.py:1"
+    assert second.location_hint == "b.py:9"
+    assert second.cached is True
+
+
 def test_explain_cached_does_not_store_none() -> None:
     class _NoneProvider:
         name = "none"
