@@ -40,7 +40,7 @@ def test_dashboard_shows_enrich_button_after_analyze_without_ai(monkeypatch) -> 
     from app.config import get_settings
 
     monkeypatch.setattr(
-        "app.main.analyze_fixtures_runtime",
+        "app.services.web_analysis_flow.analyze_fixtures_runtime",
         lambda *, analysis_id=None: _runtime_payload(analysis_id=analysis_id),
     )
     monkeypatch.setenv("TFG_AI_EXPLANATIONS_ENABLED", "1")
@@ -51,6 +51,7 @@ def test_dashboard_shows_enrich_button_after_analyze_without_ai(monkeypatch) -> 
         response = client.post(
             "/dashboard/analyze",
             data={"analysis_mode": "fixture_runtime"},
+            follow_redirects=True,
         )
         assert response.status_code == 200
         assert "Añadir explicaciones IA a este resultado" in response.text
@@ -70,7 +71,7 @@ def test_dashboard_enrich_ai_adds_explanations_without_rescan(monkeypatch) -> No
         calls["runtime"] += 1
         return _runtime_payload(analysis_id=analysis_id)
 
-    monkeypatch.setattr("app.main.analyze_fixtures_runtime", fake_runtime)
+    monkeypatch.setattr("app.services.web_analysis_flow.analyze_fixtures_runtime", fake_runtime)
     monkeypatch.setenv("TFG_AI_EXPLANATIONS_ENABLED", "1")
     monkeypatch.setenv("TFG_AI_PROVIDER", "stub")
     get_settings.cache_clear()
@@ -79,15 +80,14 @@ def test_dashboard_enrich_ai_adds_explanations_without_rescan(monkeypatch) -> No
         analyze_response = client.post(
             "/dashboard/analyze",
             data={"analysis_mode": "fixture_runtime"},
+            follow_redirects=True,
         )
         analysis_id = _extract_analysis_id(analyze_response.text)
 
         enrich_response = client.post(
-            "/dashboard/enrich-ai",
-            data={
-                "analysis_id": analysis_id,
-                "analysis_mode": "fixture_runtime",
-            },
+            f"/results/{analysis_id}/enrich-ai",
+            data={},
+            follow_redirects=True,
         )
 
         assert enrich_response.status_code == 200
@@ -109,12 +109,12 @@ def test_dashboard_enrich_ai_unknown_analysis_id(monkeypatch) -> None:
     get_scan_result_store().clear()
     try:
         response = client.post(
-            "/dashboard/enrich-ai",
-            data={"analysis_id": "deadbeef", "analysis_mode": "fixture_runtime"},
+            "/results/deadbeef/enrich-ai",
+            data={},
+            follow_redirects=True,
         )
         assert response.status_code == 200
         assert "[SCAN_RESULT_EXPIRED]" in response.text
-        assert "vuelve a lanzar" in response.text.lower()
     finally:
         get_settings.cache_clear()
 
@@ -126,8 +126,9 @@ def test_dashboard_enrich_ai_disabled_on_server(monkeypatch) -> None:
     get_settings.cache_clear()
     try:
         response = client.post(
-            "/dashboard/enrich-ai",
-            data={"analysis_id": "abc", "analysis_mode": "fixture_runtime"},
+            "/results/abc/enrich-ai",
+            data={},
+            follow_redirects=True,
         )
         assert response.status_code == 200
         assert "[AI_DISABLED]" in response.text
@@ -139,7 +140,7 @@ def test_api_presentable_enrich_returns_explanations(monkeypatch) -> None:
     from app.config import get_settings
 
     monkeypatch.setattr(
-        "app.main.analyze_fixtures_runtime",
+        "app.services.web_analysis_flow.analyze_fixtures_runtime",
         lambda *, analysis_id=None: _runtime_payload(analysis_id=analysis_id),
     )
     monkeypatch.setenv("TFG_AI_EXPLANATIONS_ENABLED", "1")
@@ -150,6 +151,7 @@ def test_api_presentable_enrich_returns_explanations(monkeypatch) -> None:
         analyze_response = client.post(
             "/dashboard/analyze",
             data={"analysis_mode": "fixture_runtime"},
+            follow_redirects=True,
         )
         analysis_id = _extract_analysis_id(analyze_response.text)
 

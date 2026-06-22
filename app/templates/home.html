@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Inicio · Secure Code Remediation{% endblock %}
+{% block content %}
+<section class="hero">
+  <span class="eyebrow">Análisis de seguridad Python</span>
+  <h1>Detecta vulnerabilidades con Bandit y Semgrep, con explicaciones IA opcionales.</h1>
+  <p class="hero-copy">
+    Sube un proyecto comprimido, clona un repositorio Git HTTPS o analiza una ruta local
+    permitida en el servidor. Los resultados se muestran en una página dedicada, lista para
+    revisión o defensa del TFG.
+  </p>
+  <div class="cta-row">
+    <a class="button" href="/analyze" style="display:inline-block;text-align:center;text-decoration:none;">Nuevo análisis</a>
+  </div>
+  <div class="feature-grid">
+    <article class="feature-card">
+      <h3>Subir ZIP</h3>
+      <p>Proyecto Python comprimido. Para pruebas locales puedes usar <code>vulnerable_demo.zip</code> en la raíz del repo.</p>
+    </article>
+    <article class="feature-card">
+      <h3>Clonar Git</h3>
+      <p>Repositorio HTTPS desde hosts permitidos (<code>TFG_GIT_ALLOWED_HOSTS</code>).</p>
+    </article>
+    <article class="feature-card">
+      <h3>Ruta local</h3>
+      <p>Subdirectorio bajo <code>TFG_LOCAL_ANALYSIS_ROOT</code> si está configurado en el servidor.</p>
+    </article>
+    <article class="feature-card">
+      <h3>IA opcional</h3>
+      <p>Activa explicaciones al analizar o añádelas después sin repetir el escaneo (requiere <code>TFG_AI_EXPLANATIONS_ENABLED=1</code>).</p>
+    </article>
+  </div>
+</section>
+{% endblock %}
