@@ -31,6 +31,7 @@ from app.services.project_scan_service import (
     clone_and_analyze_repo,
 )
 from app.services.runtime_analysis_service import analyze_fixtures_runtime
+from app.services.scan_result_store import get_scan_result_store
 
 _TEMPLATE_DIR = Path(__file__).resolve().parent / "templates"
 templates = Jinja2Templates(directory=str(_TEMPLATE_DIR))
@@ -164,6 +165,33 @@ def _build_dashboard_scan(
     return filter_presentable_scan(scan, hide_info=hide_info)
 
 
+def _scan_can_enrich_with_ai(scan: dict | None, *, ai_available: bool) -> bool:
+    """True si el resultado mostrado puede enriquecerse con IA sin re-escanear (WEB-5)."""
+    if not ai_available or scan is None:
+        return False
+    meta = scan.get("meta") or {}
+    if not meta.get("analysis_id"):
+        return False
+    findings = scan.get("findings") or []
+    if not findings:
+        return False
+    return any(row.get("ai_explanation") is None for row in findings)
+
+
+def _enrich_presentable_scan(
+    internal: dict,
+    *,
+    hide_info: bool,
+    group_equivalent: bool,
+) -> dict:
+    scan = presentable_from_internal_analysis(
+        internal,
+        group_equivalent=group_equivalent,
+        ai_provider=_resolve_ai_provider(user_requested=True),
+    )
+    return filter_presentable_scan(scan, hide_info=hide_info)
+
+
 def _render_dashboard(
     request: Request,
     *,
@@ -178,6 +206,7 @@ def _render_dashboard(
     git_url_value: str = "",
 ) -> HTMLResponse:
     settings = get_settings()
+    ai_available = settings.ai_explanations_enabled
     return templates.TemplateResponse(
         request,
         "dashboard.html",
@@ -187,7 +216,8 @@ def _render_dashboard(
             "hide_info": hide_info,
             "group_equivalent": group_equivalent,
             "enable_ai_explanations": enable_ai_explanations,
-            "ai_explanations_available": settings.ai_explanations_enabled,
+            "ai_explanations_available": ai_available,
+            "can_enrich_with_ai": _scan_can_enrich_with_ai(scan, ai_available=ai_available),
             "ai_provider_label": settings.ai_provider,
             "analysis_mode": analysis_mode,
             "analysis_error": analysis_error,
@@ -330,6 +360,11 @@ async def dashboard_analyze(
             group_equivalent=group_equivalent,
             enable_ai_explanations=enable_ai_explanations,
         )
+        get_scan_result_store().put(
+            analysis_id,
+            internal,
+            analysis_mode=analysis_mode,
+        )
         return _render_dashboard(
             request,
             scan=scan,
@@ -360,6 +395,63 @@ async def dashboard_analyze(
             local_path_value=local_path,
             git_url_value=git_url,
         )
+
+
+@app.post("/dashboard/enrich-ai", response_class=HTMLResponse)
+def dashboard_enrich_ai(
+    request: Request,
+    analysis_id: str = Form(...),
+    analysis_mode: str = Form("fixture_reports"),
+    hide_info: bool = Form(False),
+    group_equivalent: bool = Form(False),
+) -> HTMLResponse:
+    """
+    Añade explicaciones IA a un escaneo ya guardado en memoria, sin repetir SAST (WEB-5).
+    """
+    settings = get_settings()
+    if not settings.ai_explanations_enabled:
+        return _render_dashboard(
+            request,
+            scan=None,
+            hide_info=hide_info,
+            group_equivalent=group_equivalent,
+            analysis_mode=analysis_mode,
+            analysis_error=(
+                "[AI_DISABLED] Las explicaciones IA están desactivadas en este entorno "
+                "(TFG_AI_EXPLANATIONS_ENABLED=0)."
+            ),
+        )
+
+    stored = get_scan_result_store().get(analysis_id.strip())
+    if stored is None:
+        return _render_dashboard(
+            request,
+            scan=None,
+            hide_info=hide_info,
+            group_equivalent=group_equivalent,
+            analysis_mode=analysis_mode,
+            analysis_error=(
+                f"[SCAN_RESULT_EXPIRED] El resultado del análisis ya no está disponible "
+                f"en el servidor (analysis_id={analysis_id}). Vuelve a lanzar el escaneo."
+            ),
+        )
+
+    _log_event("dashboard_enrich_ai_start", analysis_id=analysis_id)
+    scan = _enrich_presentable_scan(
+        stored.internal,
+        hide_info=hide_info,
+        group_equivalent=group_equivalent,
+    )
+    _log_event("dashboard_enrich_ai_done", analysis_id=analysis_id)
+    return _render_dashboard(
+        request,
+        scan=scan,
+        hide_info=hide_info,
+        group_equivalent=group_equivalent,
+        analysis_mode=stored.analysis_mode,
+        enable_ai_explanations=True,
+    )
+
 
 @app.get("/health")
 def health():
@@ -621,6 +713,51 @@ def run_fixtures_analysis_presentable(
         return filter_presentable_scan(scan, hide_info=hide_info)
     except (FileNotFoundError, RuntimeError) as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@app.post("/analysis/{analysis_id}/presentable/enrich")
+def enrich_presentable_analysis(
+    analysis_id: str,
+    hide_info: bool = Query(
+        default=False,
+        description="Oculta hallazgos solo detección o severidad baja (vista demo).",
+    ),
+    group_equivalent: bool = Query(
+        default=False,
+        description="Agrupa hallazgos equivalentes (mismo fichero, línea y categoría MVP).",
+    ),
+) -> dict:
+    """
+    Reconstruye el presentable con explicaciones IA desde el almacén efímero (WEB-5).
+    Requiere que el analysis_id provenga de un análisis web guardado recientemente.
+    """
+    settings = get_settings()
+    if not settings.ai_explanations_enabled:
+        raise HTTPException(
+            status_code=403,
+            detail=_error_detail(
+                "AI_DISABLED",
+                "Las explicaciones IA están desactivadas (TFG_AI_EXPLANATIONS_ENABLED=0).",
+                analysis_id=analysis_id,
+            ),
+        )
+
+    stored = get_scan_result_store().get(analysis_id.strip())
+    if stored is None:
+        raise HTTPException(
+            status_code=404,
+            detail=_error_detail(
+                "SCAN_RESULT_EXPIRED",
+                "El resultado del análisis ya no está disponible en el servidor.",
+                analysis_id=analysis_id,
+            ),
+        )
+
+    return _enrich_presentable_scan(
+        stored.internal,
+        hide_info=hide_info,
+        group_equivalent=group_equivalent,
+    )
 
 
 @app.get("/analysis/pipeline/mvp-autofix-verification")

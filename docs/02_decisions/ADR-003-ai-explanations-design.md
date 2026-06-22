@@ -55,6 +55,8 @@ Si se activa un provider externo (`openai`), los fragmentos enviados salen hacia
 
 Las explicaciones se cachean por clave `(provider, model, mvp_category, cwe_id, source_rule_id[, hash_snippet])` — no por fichero/línea — para reducir llamadas, abaratar y dar reproducibilidad citable en la memoria. Implementación inicial en memoria; persistencia en disco como mejora opcional.
 
+Para **enriquecer con IA sin re-escanear** (WEB-5), el dashboard guarda el payload interno del último análisis web exitoso en un almacén efímero en memoria, indexado por `analysis_id` y con TTL de ~60 minutos. Permite regenerar solo la capa explicativa; no sustituye la persistencia de informes SAST.
+
 ### 6. Contrato de salida — `ai_explanation` opcional, `schema_version` 1.1
 
 Se añade `ai_explanation: AIExplanation | None` al JSON presentable por hallazgo (y por grupo equivalente) y un bloque correspondiente en el dashboard. El campo es **opcional** y se sube `schema_version` a **1.1** para no romper a los consumidores ni los tests del 1.0. La respuesta registra `model` y `prompt_version` cuando hay generación (trazabilidad).
