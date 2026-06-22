@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% block title %}Secure Code Remediation{% endblock %}</title>
+  <link rel="stylesheet" href="/static/web.css" />
+</head>
+<body>
+  <div class="page">
+    <nav class="site-nav">
+      <a class="brand" href="/">Secure Code Remediation</a>
+      <div class="links">
+        <a href="/" {% if nav_active == 'home' %}class="is-active"{% endif %}>Inicio</a>
+        <a href="/analyze" {% if nav_active == 'analyze' %}class="is-active"{% endif %}>Nuevo análisis</a>
+      </div>
+    </nav>
+    {% block content %}{% endblock %}
+  </div>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

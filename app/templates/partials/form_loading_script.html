@@ -1,0 +1,58 @@
+<script>
+  (function () {
+    function wireFormLoading(form, submit, status, defaultLoadingMessage) {
+      if (!form || !submit) return;
+
+      const aiCheckbox = document
+        .getElementById("dashboard-analyze-form")
+        ?.querySelector('input[name="enable_ai_explanations"]');
+
+      form.addEventListener("submit", function () {
+        if (submit.disabled) return;
+
+        submit.disabled = true;
+        submit.setAttribute("aria-busy", "true");
+        submit.classList.add("is-loading");
+        if (submit.dataset.loadingLabel) {
+          submit.textContent = submit.dataset.loadingLabel;
+        }
+
+        if (status) {
+          status.hidden = false;
+          let message = defaultLoadingMessage;
+          if (form.id === "dashboard-analyze-form" && aiCheckbox && aiCheckbox.checked) {
+            message += " Incluye explicaciones IA; puede tardar más de lo habitual.";
+          }
+          status.textContent = message;
+        }
+
+        form.setAttribute("aria-busy", "true");
+      });
+    }
+
+    const analyzeForm = document.getElementById("dashboard-analyze-form");
+    const analyzeSubmit = document.getElementById("analyze-submit");
+    const analyzeStatus = document.getElementById("analyze-form-status");
+    const aiCheckbox = analyzeForm?.querySelector('input[name="enable_ai_explanations"]');
+    const aiHint = document.getElementById("ai-duration-hint");
+
+    function syncAiHint() {
+      if (!aiHint || !aiCheckbox) return;
+      aiHint.hidden = !aiCheckbox.checked;
+    }
+
+    if (aiCheckbox) {
+      aiCheckbox.addEventListener("change", syncAiHint);
+      syncAiHint();
+    }
+
+    wireFormLoading(analyzeForm, analyzeSubmit, analyzeStatus, "Analizando código…");
+
+    wireFormLoading(
+      document.getElementById("dashboard-enrich-form"),
+      document.getElementById("enrich-submit"),
+      document.getElementById("enrich-form-status"),
+      "Generando explicaciones IA…"
+    );
+  })();
+</script>

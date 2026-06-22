@@ -9,8 +9,8 @@ client = TestClient(app)
 
 def test_root_redirects_to_dashboard() -> None:
     response = client.get("/", follow_redirects=False)
-    assert response.status_code == 302
-    assert response.headers["location"] == "/dashboard"
+    assert response.status_code == 200
+    assert "Secure Code Remediation" in response.text
 
 
 def test_dashboard_renders_html_when_reports_exist() -> None:
@@ -19,7 +19,7 @@ def test_dashboard_renders_html_when_reports_exist() -> None:
     if not bandit.exists() or not semgrep.exists():
         return
 
-    response = client.get("/dashboard")
+    response = client.get("/dashboard-legacy")
 
     assert response.status_code == 200
     assert "text/html" in response.headers.get("content-type", "")
@@ -42,7 +42,7 @@ def test_dashboard_renders_notice_when_reports_missing(monkeypatch) -> None:
 
     monkeypatch.setattr("app.main.analyze_fixtures_reports", fake_analyze)
 
-    response = client.get("/dashboard")
+    response = client.get("/dashboard-legacy")
 
     assert response.status_code == 200
     assert "No se encontraron informes estáticos del corpus MVP" in response.text
@@ -79,7 +79,7 @@ def test_dashboard_analyze_runtime_renders_presentable_result(monkeypatch) -> No
             ],
         }
 
-    monkeypatch.setattr("app.main.analyze_fixtures_runtime", fake_runtime_analysis)
+    monkeypatch.setattr("app.services.web_analysis_flow.analyze_fixtures_runtime", fake_runtime_analysis)
 
     response = client.post(
         "/dashboard/analyze",
@@ -88,6 +88,7 @@ def test_dashboard_analyze_runtime_renders_presentable_result(monkeypatch) -> No
             "hide_info": "true",
             "group_equivalent": "true",
         },
+        follow_redirects=True,
     )
 
     assert response.status_code == 200
@@ -123,12 +124,13 @@ def test_dashboard_analyze_zip_uses_uploaded_file(monkeypatch) -> None:
             ],
         }
 
-    monkeypatch.setattr("app.main.analyze_zip_bytes", fake_analyze_zip)
+    monkeypatch.setattr("app.services.web_analysis_flow.analyze_zip_bytes", fake_analyze_zip)
 
     response = client.post(
         "/dashboard/analyze",
         data={"analysis_mode": "upload_zip"},
         files={"file": ("project.zip", b"PK\x03\x04zip-content", "application/zip")},
+        follow_redirects=True,
     )
 
     assert response.status_code == 200
@@ -188,10 +190,11 @@ def test_dashboard_renders_empty_findings_state(monkeypatch) -> None:
             "findings": [],
         }
 
-    monkeypatch.setattr("app.main.analyze_fixtures_runtime", fake_runtime_analysis)
+    monkeypatch.setattr("app.services.web_analysis_flow.analyze_fixtures_runtime", fake_runtime_analysis)
     response = client.post(
         "/dashboard/analyze",
         data={"analysis_mode": "fixture_runtime"},
+        follow_redirects=True,
     )
     assert response.status_code == 200
     assert "Sin hallazgos en esta ejecución" in response.text
@@ -222,13 +225,14 @@ def test_dashboard_analyze_git_clone_success(monkeypatch) -> None:
             "findings": [],
         }
 
-    monkeypatch.setattr("app.main.clone_and_analyze_repo", fake_clone)
+    monkeypatch.setattr("app.services.web_analysis_flow.clone_and_analyze_repo", fake_clone)
     response = client.post(
         "/dashboard/analyze",
         data={
             "analysis_mode": "git_clone",
             "git_url": "https://github.com/octocat/Hello-World.git",
         },
+        follow_redirects=True,
     )
     assert response.status_code == 200
     assert "git:https://github.com/octocat/Hello-World.git" in response.text
@@ -290,6 +294,7 @@ def test_dashboard_renders_ai_explanation_when_user_opts_in(monkeypatch) -> None
                 "analysis_mode": "fixture_reports",
                 "enable_ai_explanations": "true",
             },
+            follow_redirects=True,
         )
         assert response.status_code == 200
         assert "Explicación IA" in response.text
@@ -312,7 +317,7 @@ def test_dashboard_skips_ai_on_load_even_when_env_enabled(monkeypatch) -> None:
     monkeypatch.setenv("TFG_AI_PROVIDER", "stub")
     get_settings.cache_clear()
     try:
-        response = client.get("/dashboard")
+        response = client.get("/analyze")
         assert response.status_code == 200
         assert "Incluir explicaciones IA" in response.text
         assert "Explicación IA" not in response.text
@@ -331,7 +336,7 @@ def test_dashboard_omits_ai_explanation_when_disabled(monkeypatch) -> None:
     monkeypatch.setenv("TFG_AI_EXPLANATIONS_ENABLED", "0")
     get_settings.cache_clear()
     try:
-        response = client.get("/dashboard")
+        response = client.get("/dashboard-legacy")
         assert response.status_code == 200
         assert "Explicación IA" not in response.text
     finally:

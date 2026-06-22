@@ -1,8 +1,5 @@
 """
-Humo de release: web operativa sin IA (hito fase 2).
-
-Valida que el dashboard expone todos los modos y que la API mínima
-de análisis real responde sin depender de la capa IA.
+Humo de release: web operativa sin IA (hito fase 2) + rutas v2.
 """
 
 from pathlib import Path
@@ -19,23 +16,26 @@ _REAL_MODES = (
     "git_clone",
     "local_path",
 )
-_DEMO_MODES = (
-    "fixture_reports",
-    "fixture_runtime",
-)
 
 
-def test_release_dashboard_lists_all_analysis_modes() -> None:
-    response = client.get("/dashboard")
+def test_release_analyze_lists_real_modes_only() -> None:
+    response = client.get("/analyze")
     assert response.status_code == 200
     html = response.text
-    assert "Subir ZIP (real)" in html
-    assert "Clonar repositorio Git (real)" in html
-    assert "Ruta local permitida (real)" in html
-    assert "Informes guardados (MVP/demo)" in html
-    assert "Ejecutar fixtures (MVP/demo)" in html
-    for mode in _REAL_MODES + _DEMO_MODES:
+    assert "Subir ZIP" in html
+    assert "Clonar repositorio Git" in html
+    assert "Ruta local permitida" in html
+    for mode in _REAL_MODES:
         assert f'value="{mode}"' in html
+    assert "fixture_reports" not in html
+
+
+def test_release_legacy_dashboard_lists_demo_modes() -> None:
+    response = client.get("/dashboard-legacy")
+    assert response.status_code == 200
+    body = response.text
+    assert "Informes guardados (MVP/demo)" in body
+    assert "fixture_reports" in body
 
 
 def test_release_ai_status_defaults_without_generative_layer(monkeypatch) -> None:
@@ -50,9 +50,10 @@ def test_release_ai_status_defaults_without_generative_layer(monkeypatch) -> Non
         get_settings.cache_clear()
 
 
-def test_release_health_and_dashboard_entrypoints() -> None:
+def test_release_health_and_entrypoints() -> None:
     assert client.get("/health").json() == {"status": "ok"}
-    assert client.get("/", follow_redirects=False).headers["location"] == "/dashboard"
+    assert client.get("/", follow_redirects=False).status_code == 200
+    assert client.get("/dashboard", follow_redirects=False).headers["location"] == "/analyze"
 
 
 def test_release_dashboard_fixture_reports_via_form(monkeypatch) -> None:
@@ -77,10 +78,11 @@ def test_release_dashboard_fixture_reports_via_form(monkeypatch) -> None:
             ],
         }
 
-    monkeypatch.setattr("app.main.analyze_fixtures_reports", fake_reports)
+    monkeypatch.setattr("app.services.web_analysis_flow.analyze_fixtures_reports", fake_reports)
     response = client.post(
         "/dashboard/analyze",
         data={"analysis_mode": "fixture_reports"},
+        follow_redirects=True,
     )
     assert response.status_code == 200
     assert "fixtures/mvp" in response.text
@@ -106,11 +108,12 @@ def test_release_dashboard_local_path_success_when_configured(
             "analysis_id": analysis_id,
         }
 
-    monkeypatch.setattr("app.main.analyze_local_path_relative", fake_local)
+    monkeypatch.setattr("app.services.web_analysis_flow.analyze_local_path_relative", fake_local)
     try:
         response = client.post(
             "/dashboard/analyze",
             data={"analysis_mode": "local_path", "local_path": "demo"},
+            follow_redirects=True,
         )
         assert response.status_code == 200
         assert "local:demo" in response.text

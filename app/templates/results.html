@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Resultados · Secure Code Remediation{% endblock %}
+{% block content %}
+<article class="panel panel-single">
+  {% if analysis_error %}
+  <div class="status error">
+    <strong>No se pudo mostrar el resultado</strong>
+    {{ analysis_error }}
+  </div>
+  <p class="section-copy"><a href="/analyze">Volver a nuevo análisis</a></p>
+  {% elif scan %}
+  {% include "partials/results_panel.html" %}
+  {% endif %}
+</article>
+{% endblock %}
+{% block scripts %}
+{% include "partials/form_loading_script.html" %}
+{% endblock %}

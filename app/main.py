@@ -12,6 +12,7 @@ from fastapi import (
     UploadFile,
 )
 from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from starlette.templating import Jinja2Templates
 
@@ -32,8 +33,10 @@ from app.services.project_scan_service import (
 )
 from app.services.runtime_analysis_service import analyze_fixtures_runtime
 from app.services.scan_result_store import get_scan_result_store
+from app.services.web_analysis_flow import execute_web_analysis, looks_like_zip
 
 _TEMPLATE_DIR = Path(__file__).resolve().parent / "templates"
+_STATIC_DIR = Path(__file__).resolve().parent / "static"
 templates = Jinja2Templates(directory=str(_TEMPLATE_DIR))
 
 app = FastAPI(
@@ -41,6 +44,7 @@ app = FastAPI(
     description="API base del TFG para análisis y remediación asistida de vulnerabilidades",
     version="0.1.0"
 )
+app.mount("/static", StaticFiles(directory=str(_STATIC_DIR)), name="static")
 logger = logging.getLogger(__name__)
 
 
@@ -52,8 +56,7 @@ _ALLOWED_ZIP_CONTENT_TYPES = {
 
 
 def _looks_like_zip(content: bytes) -> bool:
-    # ZIP signatures: local file header / empty archive / spanned archive
-    return content.startswith((b"PK\x03\x04", b"PK\x05\x06", b"PK\x07\x08"))
+    return looks_like_zip(content)
 
 
 def _map_analysis_error(exc: Exception, *, analysis_mode: str) -> tuple[int, str, str]:
@@ -165,6 +168,23 @@ def _build_dashboard_scan(
     return filter_presentable_scan(scan, hide_info=hide_info)
 
 
+def _web_settings_context() -> dict:
+    settings = get_settings()
+    return {
+        "ai_explanations_available": settings.ai_explanations_enabled,
+        "ai_provider_label": settings.ai_provider,
+        "local_path_enabled": settings.enable_local_path
+        and settings.local_analysis_root is not None,
+        "enable_local_path": settings.enable_local_path,
+        "local_analysis_root": str(settings.local_analysis_root)
+        if settings.local_analysis_root is not None
+        else None,
+        "git_clone_enabled": settings.enable_git_clone,
+        "git_allowed_hosts": ", ".join(sorted(settings.git_allowed_hosts)),
+        "zip_max_bytes": settings.zip_max_bytes,
+    }
+
+
 def _scan_can_enrich_with_ai(scan: dict | None, *, ai_available: bool) -> bool:
     """True si el resultado mostrado puede enriquecerse con IA sin re-escanear (WEB-5)."""
     if not ai_available or scan is None:
@@ -190,6 +210,102 @@ def _enrich_presentable_scan(
         ai_provider=_resolve_ai_provider(user_requested=True),
     )
     return filter_presentable_scan(scan, hide_info=hide_info)
+
+
+    return filter_presentable_scan(scan, hide_info=hide_info)
+
+
+def _persist_web_scan(
+    analysis_id: str,
+    internal: dict,
+    *,
+    analysis_mode: str,
+    hide_info: bool,
+    group_equivalent: bool,
+    enable_ai_explanations: bool,
+) -> None:
+    get_scan_result_store().put(
+        analysis_id,
+        internal,
+        analysis_mode=analysis_mode,
+        hide_info=hide_info,
+        group_equivalent=group_equivalent,
+        enable_ai_explanations=enable_ai_explanations,
+    )
+
+
+def _scan_from_stored(
+    stored,
+    *,
+    hide_info: bool | None = None,
+    group_equivalent: bool | None = None,
+    enable_ai_explanations: bool | None = None,
+) -> dict:
+    return _build_dashboard_scan(
+        stored.internal,
+        hide_info=hide_info if hide_info is not None else stored.hide_info,
+        group_equivalent=group_equivalent
+        if group_equivalent is not None
+        else stored.group_equivalent,
+        enable_ai_explanations=enable_ai_explanations
+        if enable_ai_explanations is not None
+        else stored.enable_ai_explanations,
+    )
+
+
+def _render_analyze(
+    request: Request,
+    *,
+    analysis_mode: str = "upload_zip",
+    hide_info: bool = False,
+    group_equivalent: bool = False,
+    enable_ai_explanations: bool = False,
+    analysis_error: str | None = None,
+    local_path_value: str = "",
+    git_url_value: str = "",
+) -> HTMLResponse:
+    return templates.TemplateResponse(
+        request,
+        "analyze.html",
+        {
+            "request": request,
+            "nav_active": "analyze",
+            "analysis_mode": analysis_mode,
+            "hide_info": hide_info,
+            "group_equivalent": group_equivalent,
+            "enable_ai_explanations": enable_ai_explanations,
+            "analysis_error": analysis_error,
+            "local_path_value": local_path_value,
+            "git_url_value": git_url_value,
+            **_web_settings_context(),
+        },
+    )
+
+
+def _render_results(
+    request: Request,
+    *,
+    scan: dict | None,
+    hide_info: bool = False,
+    group_equivalent: bool = False,
+    analysis_error: str | None = None,
+) -> HTMLResponse:
+    settings = get_settings()
+    ai_available = settings.ai_explanations_enabled
+    return templates.TemplateResponse(
+        request,
+        "results.html",
+        {
+            "request": request,
+            "nav_active": "results",
+            "scan": scan,
+            "hide_info": hide_info,
+            "group_equivalent": group_equivalent,
+            "can_enrich_with_ai": _scan_can_enrich_with_ai(scan, ai_available=ai_available),
+            "analysis_error": analysis_error,
+            **_web_settings_context(),
+        },
+    )
 
 
 def _render_dashboard(
@@ -237,14 +353,148 @@ def _render_dashboard(
     )
 
 
-@app.get("/", response_class=RedirectResponse)
-def root(request: Request) -> RedirectResponse:
-    query = request.url.query
-    target = "/dashboard" + (f"?{query}" if query else "")
-    return RedirectResponse(url=target, status_code=302)
+@app.get("/", response_class=HTMLResponse)
+def home(request: Request) -> HTMLResponse:
+    """Landing v2: presentación del producto y enlace a nuevo análisis."""
+    return templates.TemplateResponse(
+        request,
+        "home.html",
+        {"request": request, "nav_active": "home", **_web_settings_context()},
+    )
 
 
-@app.get("/dashboard", response_class=HTMLResponse)
+@app.get("/analyze", response_class=HTMLResponse)
+def analyze_form(request: Request) -> HTMLResponse:
+    """Formulario de análisis (solo modos reales)."""
+    return _render_analyze(request)
+
+
+@app.post("/analyze", response_model=None)
+async def analyze_submit(
+    request: Request,
+    analysis_mode: str = Form(...),
+    hide_info: bool = Form(False),
+    group_equivalent: bool = Form(False),
+    enable_ai_explanations: bool = Form(False),
+    local_path: str = Form(""),
+    git_url: str = Form(""),
+    file: UploadFile | None = File(default=None),
+) -> RedirectResponse | HTMLResponse:
+    """Ejecuta SAST y redirige a la página de resultados (WEB v2 PRG)."""
+    analysis_id = _new_analysis_id()
+    _log_event("web_v2_analysis_start", analysis_id=analysis_id, analysis_mode=analysis_mode)
+    try:
+        internal = await execute_web_analysis(
+            analysis_mode=analysis_mode,
+            analysis_id=analysis_id,
+            local_path=local_path,
+            git_url=git_url,
+            file=file,
+            allow_demo_modes=False,
+        )
+        internal = _attach_analysis_id(internal, analysis_id)
+        _log_event("web_v2_analysis_done", analysis_id=analysis_id, analysis_mode=analysis_mode)
+        _persist_web_scan(
+            analysis_id,
+            internal,
+            analysis_mode=analysis_mode,
+            hide_info=hide_info,
+            group_equivalent=group_equivalent,
+            enable_ai_explanations=enable_ai_explanations,
+        )
+        return RedirectResponse(url=f"/results/{analysis_id}", status_code=303)
+    except (FileNotFoundError, PermissionError, RuntimeError, ValueError, PayloadTooLargeError) as exc:
+        _, code, msg = _map_analysis_error(exc, analysis_mode=analysis_mode)
+        _log_event(
+            "web_v2_analysis_error",
+            analysis_id=analysis_id,
+            analysis_mode=analysis_mode,
+            error_code=code,
+            message=msg,
+        )
+        return _render_analyze(
+            request,
+            analysis_mode=analysis_mode,
+            hide_info=hide_info,
+            group_equivalent=group_equivalent,
+            enable_ai_explanations=enable_ai_explanations,
+            analysis_error=f"[{code}] {msg} (analysis_id={analysis_id})",
+            local_path_value=local_path,
+            git_url_value=git_url,
+        )
+
+
+@app.get("/results/{analysis_id}", response_class=HTMLResponse)
+def results_page(
+    request: Request,
+    analysis_id: str,
+    hide_info: bool | None = Query(default=None),
+    group_equivalent: bool | None = Query(default=None),
+) -> HTMLResponse:
+    """Muestra el resultado de un análisis guardado en el almacén efímero."""
+    stored = get_scan_result_store().get(analysis_id)
+    if stored is None:
+        return _render_results(
+            request,
+            scan=None,
+            analysis_error=(
+                f"[SCAN_RESULT_EXPIRED] El resultado ya no está disponible "
+                f"(analysis_id={analysis_id}). Vuelve a lanzar el análisis."
+            ),
+        )
+    hi = hide_info if hide_info is not None else stored.hide_info
+    ge = group_equivalent if group_equivalent is not None else stored.group_equivalent
+    scan = _scan_from_stored(stored, hide_info=hi, group_equivalent=ge)
+    return _render_results(request, scan=scan, hide_info=hi, group_equivalent=ge)
+
+
+@app.post("/results/{analysis_id}/enrich-ai", response_model=None)
+def results_enrich_ai(
+    request: Request,
+    analysis_id: str,
+    hide_info: bool = Form(False),
+    group_equivalent: bool = Form(False),
+) -> RedirectResponse | HTMLResponse:
+    """Añade explicaciones IA sin re-escanear y redirige a resultados."""
+    settings = get_settings()
+    if not settings.ai_explanations_enabled:
+        return _render_results(
+            request,
+            scan=None,
+            analysis_error=(
+                "[AI_DISABLED] Las explicaciones IA están desactivadas "
+                "(TFG_AI_EXPLANATIONS_ENABLED=0)."
+            ),
+        )
+    stored = get_scan_result_store().get(analysis_id)
+    if stored is None:
+        return _render_results(
+            request,
+            scan=None,
+            analysis_error=(
+                f"[SCAN_RESULT_EXPIRED] El resultado ya no está disponible "
+                f"(analysis_id={analysis_id})."
+            ),
+        )
+    _log_event("web_v2_enrich_ai_start", analysis_id=analysis_id)
+    get_scan_result_store().mark_ai_enriched(analysis_id)
+    _log_event("web_v2_enrich_ai_done", analysis_id=analysis_id)
+    query = []
+    if hide_info:
+        query.append("hide_info=true")
+    if group_equivalent:
+        query.append("group_equivalent=true")
+    suffix = f"?{'&'.join(query)}" if query else ""
+    return RedirectResponse(url=f"/results/{analysis_id}{suffix}", status_code=303)
+
+
+@app.get("/dashboard", response_class=RedirectResponse)
+def dashboard_legacy_redirect() -> RedirectResponse:
+    """Compatibilidad: la consola antigua redirige al formulario v2."""
+    return RedirectResponse(url="/analyze", status_code=302)
+
+
+@app.get("/dashboard-legacy", response_class=HTMLResponse)
 def dashboard(
     request: Request,
     hide_info: bool = Query(
@@ -281,7 +531,7 @@ def dashboard(
     )
 
 
-@app.post("/dashboard/analyze", response_class=HTMLResponse)
+@app.post("/dashboard/analyze", response_model=None)
 async def dashboard_analyze(
     request: Request,
     analysis_mode: str = Form(...),
@@ -291,90 +541,32 @@ async def dashboard_analyze(
     local_path: str = Form(""),
     git_url: str = Form(""),
     file: UploadFile | None = File(default=None),
-) -> HTMLResponse:
+) -> RedirectResponse | HTMLResponse:
     """
-    Ejecuta análisis desde la interfaz web y renderiza el resultado en la misma vista.
+    Ruta legacy: mismo flujo que /analyze pero permite modos demo para tests/CI.
     """
     analysis_id = _new_analysis_id()
     _log_event("dashboard_analysis_start", analysis_id=analysis_id, analysis_mode=analysis_mode)
     try:
-        if analysis_mode == "fixture_reports":
-            internal = analyze_fixtures_reports()
-        elif analysis_mode == "fixture_runtime":
-            internal = analyze_fixtures_runtime(analysis_id=analysis_id)
-        elif analysis_mode == "upload_zip":
-            if file is None or not file.filename:
-                raise ValueError("Selecciona un fichero ZIP antes de lanzar el análisis.")
-            if not file.filename.lower().endswith(".zip"):
-                raise ValueError("El fichero seleccionado debe terminar en .zip")
-            if file.content_type and file.content_type not in _ALLOWED_ZIP_CONTENT_TYPES:
-                raise ValueError(
-                    "Tipo de contenido no permitido para ZIP. "
-                    f"Recibido: {file.content_type}"
-                )
-            content = await file.read()
-            if not content:
-                raise ValueError("El fichero ZIP está vacío")
-            if not _looks_like_zip(content):
-                raise ValueError("El contenido subido no tiene firma ZIP válida")
-            internal = analyze_zip_bytes(content, analysis_id=analysis_id)
-        elif analysis_mode == "local_path":
-            settings = get_settings()
-            if not settings.enable_local_path:
-                raise PermissionError(
-                    "Análisis por ruta local desactivado (TFG_ENABLE_LOCAL_PATH=0). "
-                    "Activar solo en entornos controlados."
-                )
-            if settings.local_analysis_root is None:
-                raise PermissionError(
-                    "El análisis por ruta local está desactivado en este entorno."
-                )
-            if not local_path.strip():
-                raise ValueError("Indica una ruta relativa para el modo local_path")
-            internal = analyze_local_path_relative(
-                local_path,
-                allowed_root=settings.local_analysis_root,
-                analysis_id=analysis_id,
-            )
-        elif analysis_mode == "git_clone":
-            settings = get_settings()
-            if not settings.enable_git_clone:
-                raise PermissionError(
-                    "El análisis por git clone está desactivado en este entorno."
-                )
-            if not git_url.strip():
-                raise ValueError("Indica una URL HTTPS para el modo git_clone")
-            internal = clone_and_analyze_repo(
-                git_url.strip(),
-                analysis_id=analysis_id,
-            )
-        else:
-            raise ValueError(f"Modo de análisis no soportado: {analysis_mode}")
-
+        internal = await execute_web_analysis(
+            analysis_mode=analysis_mode,
+            analysis_id=analysis_id,
+            local_path=local_path,
+            git_url=git_url,
+            file=file,
+            allow_demo_modes=True,
+        )
         internal = _attach_analysis_id(internal, analysis_id)
         _log_event("dashboard_analysis_done", analysis_id=analysis_id, analysis_mode=analysis_mode)
-
-        scan = _build_dashboard_scan(
-            internal,
-            hide_info=hide_info,
-            group_equivalent=group_equivalent,
-            enable_ai_explanations=enable_ai_explanations,
-        )
-        get_scan_result_store().put(
+        _persist_web_scan(
             analysis_id,
             internal,
             analysis_mode=analysis_mode,
-        )
-        return _render_dashboard(
-            request,
-            scan=scan,
             hide_info=hide_info,
             group_equivalent=group_equivalent,
-            analysis_mode=analysis_mode,
             enable_ai_explanations=enable_ai_explanations,
-            local_path_value=local_path,
-            git_url_value=git_url,
         )
+        return RedirectResponse(url=f"/results/{analysis_id}", status_code=303)
     except (FileNotFoundError, PermissionError, RuntimeError, ValueError, PayloadTooLargeError) as exc:
         _, code, msg = _map_analysis_error(exc, analysis_mode=analysis_mode)
         _log_event(
@@ -384,12 +576,23 @@ async def dashboard_analyze(
             error_code=code,
             message=msg,
         )
-        return _render_dashboard(
+        if analysis_mode in {"fixture_reports", "fixture_runtime"}:
+            return _render_dashboard(
+                request,
+                scan=None,
+                hide_info=hide_info,
+                group_equivalent=group_equivalent,
+                analysis_mode=analysis_mode,
+                enable_ai_explanations=enable_ai_explanations,
+                analysis_error=f"[{code}] {msg} (analysis_id={analysis_id})",
+                local_path_value=local_path,
+                git_url_value=git_url,
+            )
+        return _render_analyze(
             request,
-            scan=None,
+            analysis_mode=analysis_mode,
             hide_info=hide_info,
             group_equivalent=group_equivalent,
-            analysis_mode=analysis_mode,
             enable_ai_explanations=enable_ai_explanations,
             analysis_error=f"[{code}] {msg} (analysis_id={analysis_id})",
             local_path_value=local_path,
@@ -397,60 +600,47 @@ async def dashboard_analyze(
         )
 
 
-@app.post("/dashboard/enrich-ai", response_class=HTMLResponse)
+@app.post("/dashboard/enrich-ai", response_model=None)
 def dashboard_enrich_ai(
     request: Request,
     analysis_id: str = Form(...),
     analysis_mode: str = Form("fixture_reports"),
     hide_info: bool = Form(False),
     group_equivalent: bool = Form(False),
-) -> HTMLResponse:
-    """
-    Añade explicaciones IA a un escaneo ya guardado en memoria, sin repetir SAST (WEB-5).
-    """
+) -> RedirectResponse | HTMLResponse:
+    """Ruta legacy de enrich: redirige a /results/{id} (WEB-5 / WEB v2)."""
     settings = get_settings()
     if not settings.ai_explanations_enabled:
-        return _render_dashboard(
+        return _render_results(
             request,
             scan=None,
-            hide_info=hide_info,
-            group_equivalent=group_equivalent,
-            analysis_mode=analysis_mode,
             analysis_error=(
-                "[AI_DISABLED] Las explicaciones IA están desactivadas en este entorno "
+                "[AI_DISABLED] Las explicaciones IA están desactivadas "
                 "(TFG_AI_EXPLANATIONS_ENABLED=0)."
             ),
         )
 
     stored = get_scan_result_store().get(analysis_id.strip())
     if stored is None:
-        return _render_dashboard(
+        return _render_results(
             request,
             scan=None,
-            hide_info=hide_info,
-            group_equivalent=group_equivalent,
-            analysis_mode=analysis_mode,
             analysis_error=(
-                f"[SCAN_RESULT_EXPIRED] El resultado del análisis ya no está disponible "
-                f"en el servidor (analysis_id={analysis_id}). Vuelve a lanzar el escaneo."
+                f"[SCAN_RESULT_EXPIRED] El resultado ya no está disponible "
+                f"(analysis_id={analysis_id})."
             ),
         )
 
     _log_event("dashboard_enrich_ai_start", analysis_id=analysis_id)
-    scan = _enrich_presentable_scan(
-        stored.internal,
-        hide_info=hide_info,
-        group_equivalent=group_equivalent,
-    )
+    get_scan_result_store().mark_ai_enriched(analysis_id.strip())
     _log_event("dashboard_enrich_ai_done", analysis_id=analysis_id)
-    return _render_dashboard(
-        request,
-        scan=scan,
-        hide_info=hide_info,
-        group_equivalent=group_equivalent,
-        analysis_mode=stored.analysis_mode,
-        enable_ai_explanations=True,
-    )
+    query = []
+    if hide_info:
+        query.append("hide_info=true")
+    if group_equivalent:
+        query.append("group_equivalent=true")
+    suffix = f"?{'&'.join(query)}" if query else ""
+    return RedirectResponse(url=f"/results/{analysis_id.strip()}{suffix}", status_code=303)
 
 
 @app.get("/health")
