@@ -670,6 +670,29 @@
       overflow-wrap: anywhere;
       word-break: break-word;
     }
+    .ai-code-focus {
+      margin: 0;
+      padding: 0.55rem 0.65rem;
+      border-radius: var(--radius-sm);
+      background: rgba(0, 0, 0, 0.28);
+      font-size: 0.82rem;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+      max-width: 100%;
+    }
+    .ai-steps {
+      margin: 0;
+      padding-left: 1.15rem;
+      display: grid;
+      gap: 0.35rem;
+    }
+    .ai-steps li {
+      color: #e9f4ff;
+      font-size: 0.9rem;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
     .ai-disclaimer {
       margin-top: 0.5rem;
       font-size: 0.74rem;
@@ -1106,12 +1129,30 @@
                 </span>
               </div>
               <dl>
+                {% if row.ai_explanation.location_hint %}
+                <dt>Ubicación</dt>
+                <dd><code>{{ row.ai_explanation.location_hint }}</code></dd>
+                {% endif %}
+                {% if row.ai_explanation.code_focus %}
+                <dt>Fragmento relevante</dt>
+                <dd><pre class="ai-code-focus">{{ row.ai_explanation.code_focus }}</pre></dd>
+                {% endif %}
                 <dt>Resumen</dt>
                 <dd>{{ row.ai_explanation.summary }}</dd>
                 <dt>Riesgo</dt>
                 <dd>{{ row.ai_explanation.risk }}</dd>
                 <dt>Sugerencia</dt>
                 <dd>{{ row.ai_explanation.suggestion }}</dd>
+                {% if row.ai_explanation.action_steps %}
+                <dt>Pasos sugeridos</dt>
+                <dd>
+                  <ol class="ai-steps">
+                    {% for step in row.ai_explanation.action_steps %}
+                    <li>{{ step }}</li>
+                    {% endfor %}
+                  </ol>
+                </dd>
+                {% endif %}
               </dl>
               <p class="ai-disclaimer">
                 Explicación generada por IA; puede contener errores. La verificación la

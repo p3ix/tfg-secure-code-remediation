@@ -4,6 +4,7 @@ from dataclasses import replace
 
 from app.models.ai_explanation import AIExplanation
 from app.models.finding import NormalizedFinding
+from app.services.ai.enrichment import apply_finding_enrichment
 from app.services.ai.provider import AIProvider
 
 ExplanationKey = tuple[str, str, str, int | None, str]
@@ -56,9 +57,13 @@ def explain_cached(
     key = explanation_cache_key(provider.name, provider.model, finding)
     hit = cache.get(key)
     if hit is not None:
-        return replace(hit, cached=True)
+        return replace(
+            apply_finding_enrichment(hit, finding),
+            cached=True,
+        )
     explanation = provider.explain(finding)
     if explanation is None:
         return None
-    cache.set(key, explanation)
-    return explanation
+    enriched = apply_finding_enrichment(explanation, finding)
+    cache.set(key, enriched)
+    return enriched

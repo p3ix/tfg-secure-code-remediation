@@ -40,7 +40,12 @@ def test_explain_success(monkeypatch: pytest.MonkeyPatch) -> None:
         assert payload["format"] == "json"
         return {
             "response": json.dumps(
-                {"summary": "resumen", "risk": "riesgo", "suggestion": "sugerencia"}
+                {
+                    "summary": "resumen",
+                    "risk": "riesgo",
+                    "suggestion": "sugerencia",
+                    "action_steps": ["paso 1", "paso 2"],
+                }
             )
         }
 
@@ -52,7 +57,9 @@ def test_explain_success(monkeypatch: pytest.MonkeyPatch) -> None:
     assert explanation.model == "llama3.2:3b"
     assert explanation.summary == "resumen"
     assert explanation.suggestion == "sugerencia"
-    assert explanation.prompt_version == "v2"
+    assert explanation.action_steps == ["paso 1", "paso 2"]
+    assert explanation.location_hint == "app.py:1"
+    assert explanation.prompt_version == "v3"
     assert explanation.prompt_hash and len(explanation.prompt_hash) == 16
 
 
@@ -86,6 +93,13 @@ def test_explain_degrades_on_missing_keys(monkeypatch: pytest.MonkeyPatch) -> No
 
     monkeypatch.setattr(mod, "_http_post_json", fake_post)
     assert _provider().explain(_finding()) is None
+
+
+def test_prompt_includes_file_and_line() -> None:
+    prompt = _build_prompt(_finding(), include_snippet=False)
+    assert "fichero: app.py" in prompt
+    assert "línea: 1" in prompt
+    assert "categoría MVP: command_injection" in prompt
 
 
 def test_prompt_excludes_snippet_by_default() -> None:

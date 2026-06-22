@@ -63,4 +63,28 @@ def test_explanation_to_dict_keys() -> None:
         "prompt_version",
         "prompt_hash",
         "cached",
+        "location_hint",
+        "code_focus",
+        "action_steps",
     }
+
+
+def test_stub_provider_includes_location_and_steps() -> None:
+    finding = NormalizedFinding(
+        source_tool="bandit",
+        source_rule_id="B602",
+        file_path="pkg/handler.py",
+        line_start=7,
+        raw_message="subprocess con shell=True",
+        severity="low",
+        mvp_category="command_injection",
+        candidate_for_remediation=True,
+        remediation_mode="autofix_candidate",
+        code_snippet="os.system(user_input)",
+    )
+    explanation = StubProvider().explain(finding)
+
+    assert explanation.location_hint == "pkg/handler.py:7"
+    assert explanation.code_focus == "os.system(user_input)"
+    assert explanation.action_steps
+    assert len(explanation.action_steps) >= 2
