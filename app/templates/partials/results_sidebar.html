@@ -1,0 +1,91 @@
+<aside class="panel side-panel results-sidebar" aria-label="Resumen y filtros">
+  <div class="results-meta-card">
+    <h2 class="section-title">Metadatos</h2>
+    <dl class="meta-dl">
+      <div>
+        <dt>Objetivo</dt>
+        <dd><code>{{ scan.meta.analysis_target }}</code></dd>
+      </div>
+      <div>
+        <dt>Modo</dt>
+        <dd><code>{{ scan.meta.execution_mode }}</code></dd>
+      </div>
+      {% if scan.meta.analysis_id %}
+      <div>
+        <dt>Analysis ID</dt>
+        <dd><code>{{ scan.meta.analysis_id }}</code></dd>
+      </div>
+      {% endif %}
+      <div>
+        <dt>Generado</dt>
+        <dd>{{ scan.meta.generated_at }}</dd>
+      </div>
+    </dl>
+  </div>
+
+  <div class="stats-grid stats-grid--compact">
+    <article class="stat-card">
+      <h3>Total</h3>
+      <div class="num">{{ scan.summary.total_findings }}</div>
+    </article>
+    {% for sev, n in scan.summary.by_severity.items() %}
+    <article class="stat-card">
+      <h3>{{ sev }}</h3>
+      <div class="num sev-{{ sev }}">{{ n }}</div>
+    </article>
+    {% endfor %}
+  </div>
+
+  {% include "partials/ai_status_banner.html" %}
+  {% include "partials/view_filters_form.html" %}
+
+  {% if can_enrich_with_ai %}
+  <form
+    id="dashboard-enrich-form"
+    class="enrich-ai-bar enrich-ai-bar--compact"
+    method="post"
+    action="/results/{{ scan.meta.analysis_id }}/enrich-ai"
+  >
+    <input type="hidden" name="hide_info" value="{{ 'true' if hide_info else 'false' }}" />
+    <input
+      type="hidden"
+      name="group_equivalent"
+      value="{{ 'true' if group_equivalent else 'false' }}"
+    />
+    <p class="form-hint form-hint--ai enrich-ai-hint">
+      Sin IA en este escaneo. Añade explicaciones sin repetir SAST
+      (<code>{{ ai_provider_label }}</code>).
+    </p>
+    <p class="form-status" id="enrich-form-status" role="status" aria-live="polite" hidden></p>
+    <button
+      class="button button--secondary button--compact"
+      type="submit"
+      id="enrich-submit"
+      data-loading-label="Generando explicaciones IA…"
+    >
+      Añadir explicaciones IA
+    </button>
+  </form>
+  {% endif %}
+
+  {% if scan.findings|length > 0 %}
+  <nav class="findings-index" aria-labelledby="findings-index-title">
+    <h3 id="findings-index-title" class="section-title">Índice de hallazgos</h3>
+    <ol class="findings-index-list">
+      {% for row in scan.findings %}
+      <li>
+        <a class="findings-index-link sev-{{ row.severity }}" href="#finding-{{ row.id }}">
+          <span class="findings-index-id">#{{ row.id }}</span>
+          <span class="findings-index-label">{{ row.title }}</span>
+          <span class="findings-index-loc">{{ row.file }}:{{ row.line_start }}</span>
+        </a>
+      </li>
+      {% endfor %}
+    </ol>
+  </nav>
+  {% endif %}
+
+  <div class="results-sidebar-actions">
+    <a class="button button--ghost" href="/analyze">Nuevo análisis</a>
+  </div>
+</aside>

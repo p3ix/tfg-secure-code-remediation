@@ -1147,3 +1147,196 @@
       border-color: var(--line);
       background: rgba(255, 255, 255, 0.02);
     }
+    .results-page .page-header {
+      margin-bottom: 1rem;
+    }
+    .results-page-target {
+      color: var(--muted);
+      font-size: 0.94rem;
+    }
+    .results-layout {
+      margin-top: 0.25rem;
+    }
+    @media (min-width: 901px) {
+      .results-page .results-layout.layout--split-scroll {
+        align-items: stretch;
+        height: calc(100dvh - 9.5rem);
+        min-height: 24rem;
+        max-height: calc(100dvh - 5rem);
+      }
+    }
+    .results-sidebar .section-title {
+      font-size: 1rem;
+    }
+    .results-meta-card {
+      display: grid;
+      gap: 0.55rem;
+    }
+    .meta-dl {
+      display: grid;
+      gap: 0.55rem;
+      margin: 0;
+    }
+    .meta-dl dt {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--muted);
+    }
+    .meta-dl dd {
+      margin: 0.1rem 0 0;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+    .stats-grid--compact {
+      grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
+      gap: 0.5rem;
+      margin-bottom: 0.85rem;
+    }
+    .stats-grid--compact .stat-card {
+      padding: 0.65rem 0.7rem;
+    }
+    .stats-grid--compact .stat-card h3 {
+      font-size: 0.68rem;
+      margin-bottom: 0.2rem;
+    }
+    .stats-grid--compact .num {
+      font-size: 1.35rem;
+    }
+    .view-filters-bar--compact {
+      margin-bottom: 0.85rem;
+      padding: 0.8rem 0.85rem;
+    }
+    .view-filters-copy {
+      margin-bottom: 0;
+      font-size: 0.86rem;
+    }
+    .view-filters-fields {
+      display: grid;
+      gap: 0.65rem;
+    }
+    .view-filters-fields select {
+      width: 100%;
+      padding: 0.65rem 0.75rem;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--line);
+      background: var(--panel-strong);
+      color: var(--ink);
+      font: inherit;
+    }
+    .enrich-ai-bar--compact {
+      margin-bottom: 0.85rem;
+      padding: 0.8rem 0.85rem;
+    }
+    .findings-index {
+      display: grid;
+      gap: 0.45rem;
+      margin-bottom: 0.85rem;
+    }
+    .findings-index-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 0.35rem;
+      max-height: 14rem;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+    }
+    .findings-index-link {
+      display: grid;
+      gap: 0.1rem;
+      padding: 0.45rem 0.55rem;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.03);
+      color: var(--ink);
+      text-decoration: none;
+      font-size: 0.84rem;
+    }
+    .findings-index-link:hover {
+      border-color: rgba(35, 198, 163, 0.35);
+      background: rgba(35, 198, 163, 0.06);
+    }
+    .findings-index-id {
+      font-family: var(--font-mono);
+      color: var(--accent);
+      font-size: 0.78rem;
+    }
+    .findings-index-label {
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+    .findings-index-loc {
+      color: var(--muted);
+      font-size: 0.78rem;
+      overflow-wrap: anywhere;
+    }
+    .findings-index-link.sev-high { border-left: 3px solid var(--sev-high); }
+    .findings-index-link.sev-medium { border-left: 3px solid var(--sev-medium); }
+    .findings-index-link.sev-low { border-left: 3px solid var(--sev-low); }
+    .results-sidebar-actions {
+      margin-top: auto;
+      padding-top: 0.5rem;
+    }
+    .results-main .findings-section-head {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 0.65rem;
+      align-items: baseline;
+      margin-bottom: 0.85rem;
+    }
+    .finding {
+      scroll-margin-top: 1rem;
+    }
+    .tool-diagnostics--collapsible {
+      margin-bottom: 1rem;
+      padding: 0.65rem 0.85rem;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.02);
+    }
+    .tool-diagnostics--collapsible summary {
+      cursor: pointer;
+      list-style: none;
+    }
+    .tool-diagnostics--collapsible summary::-webkit-details-marker {
+      display: none;
+    }
+    .tool-diagnostics--collapsible .tool-diagnostics-grid {
+      margin-top: 0.75rem;
+    }
+    .results-breakdown {
+      margin-bottom: 1rem;
+    }
+    .status--compact {
+      margin-top: 1rem;
+      font-size: 0.88rem;
+    }
+    .results-mobile-bar {
+      display: none;
+      position: sticky;
+      bottom: 0;
+      z-index: 20;
+      gap: 0.5rem;
+      padding: 0.65rem;
+      margin-top: 0.75rem;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--line);
+      background: rgba(10, 19, 28, 0.94);
+      backdrop-filter: blur(8px);
+    }
+    @media (max-width: 900px) {
+      .results-sidebar-actions {
+        display: none;
+      }
+      .results-mobile-bar {
+        display: flex;
+        flex-wrap: wrap;
+      }
+      .results-page .results-layout.layout--split-scroll {
+        height: auto;
+        max-height: none;
+      }
+    }

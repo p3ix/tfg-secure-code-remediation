@@ -1,12 +1,11 @@
 """WEB v2 fase 3: experiencia con/sin IA y filtros en resultados."""
 
-import re
-
 from fastapi.testclient import TestClient
 
 from app.config import get_settings
 from app.main import app
 from app.services.scan_result_store import get_scan_result_store
+from tests.web_html_assertions import extract_analysis_id
 
 client = TestClient(app)
 
@@ -42,12 +41,6 @@ def _runtime_payload(*, analysis_id: str | None = None) -> dict:
             },
         ],
     }
-
-
-def _extract_analysis_id(html: str) -> str:
-    match = re.search(r"Analysis ID: <code>([a-f0-9]+)</code>", html)
-    assert match is not None, "analysis_id no encontrado en HTML"
-    return match.group(1)
 
 
 def test_analyze_shows_ai_disabled_notice_when_layer_off(monkeypatch) -> None:
@@ -93,7 +86,7 @@ def test_analyze_without_ai_shows_enrich_on_results(monkeypatch) -> None:
         )
         assert response.status_code == 200
         assert "Sin IA en este escaneo" in response.text
-        assert "Añadir explicaciones IA a este resultado" in response.text
+        assert "Añadir explicaciones IA" in response.text
         assert "Explicación IA" not in response.text
         assert "Filtros de vista" in response.text
     finally:
@@ -123,7 +116,7 @@ def test_analyze_with_ai_includes_explanations(monkeypatch) -> None:
         assert response.status_code == 200
         assert "Con explicaciones IA" in response.text
         assert "Explicación IA" in response.text
-        assert "Añadir explicaciones IA a este resultado" not in response.text
+        assert "Añadir explicaciones IA" not in response.text
     finally:
         get_scan_result_store().clear()
         get_settings.cache_clear()
@@ -176,7 +169,7 @@ def test_results_enrich_after_view_prefs(monkeypatch) -> None:
             files={"file": ("demo.zip", b"PK\x03\x04x", "application/zip")},
             follow_redirects=True,
         )
-        analysis_id = _extract_analysis_id(analyze_response.text)
+        analysis_id = extract_analysis_id(analyze_response.text)
 
         client.post(
             f"/results/{analysis_id}/view-prefs",

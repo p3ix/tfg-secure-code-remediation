@@ -1,9 +1,8 @@
-import re
-
 from fastapi.testclient import TestClient
 
 from app.main import app
 from app.services.scan_result_store import get_scan_result_store
+from tests.web_html_assertions import extract_analysis_id
 
 client = TestClient(app)
 
@@ -30,12 +29,6 @@ def _runtime_payload(*, analysis_id: str | None = None) -> dict:
     }
 
 
-def _extract_analysis_id(html: str) -> str:
-    match = re.search(r"Analysis ID: <code>([a-f0-9]+)</code>", html)
-    assert match is not None, "analysis_id no encontrado en HTML"
-    return match.group(1)
-
-
 def test_dashboard_shows_enrich_button_after_analyze_without_ai(monkeypatch) -> None:
     from app.config import get_settings
 
@@ -54,7 +47,7 @@ def test_dashboard_shows_enrich_button_after_analyze_without_ai(monkeypatch) -> 
             follow_redirects=True,
         )
         assert response.status_code == 200
-        assert "Añadir explicaciones IA a este resultado" in response.text
+        assert "Añadir explicaciones IA" in response.text
         assert "dashboard-enrich-form" in response.text
         assert "Explicación IA" not in response.text
     finally:
@@ -82,7 +75,7 @@ def test_dashboard_enrich_ai_adds_explanations_without_rescan(monkeypatch) -> No
             data={"analysis_mode": "fixture_runtime"},
             follow_redirects=True,
         )
-        analysis_id = _extract_analysis_id(analyze_response.text)
+        analysis_id = extract_analysis_id(analyze_response.text)
 
         enrich_response = client.post(
             f"/results/{analysis_id}/enrich-ai",
@@ -95,7 +88,7 @@ def test_dashboard_enrich_ai_adds_explanations_without_rescan(monkeypatch) -> No
         assert "Explicación IA" in enrich_response.text
         assert "Ubicación" in enrich_response.text
         assert "Pasos sugeridos" in enrich_response.text
-        assert "Añadir explicaciones IA a este resultado" not in enrich_response.text
+        assert "Añadir explicaciones IA" not in enrich_response.text
     finally:
         get_scan_result_store().clear()
         get_settings.cache_clear()
@@ -153,7 +146,7 @@ def test_api_presentable_enrich_returns_explanations(monkeypatch) -> None:
             data={"analysis_mode": "fixture_runtime"},
             follow_redirects=True,
         )
-        analysis_id = _extract_analysis_id(analyze_response.text)
+        analysis_id = extract_analysis_id(analyze_response.text)
 
         api_response = client.post(f"/analysis/{analysis_id}/presentable/enrich")
 

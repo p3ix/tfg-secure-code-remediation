@@ -140,6 +140,21 @@ def _log_event(event: str, *, analysis_id: str, **fields: object) -> None:
     logger.info("event=%s analysis_id=%s payload=%s", event, analysis_id, fields)
 
 
+def _results_page_url(
+    analysis_id: str,
+    *,
+    hide_info: bool = False,
+    group_equivalent: bool = False,
+) -> str:
+    params: list[str] = []
+    if hide_info:
+        params.append("hide_info=true")
+    if group_equivalent:
+        params.append("group_equivalent=true")
+    query = f"?{'&'.join(params)}" if params else ""
+    return f"/results/{analysis_id}{query}"
+
+
 def _resolve_ai_provider(*, user_requested: bool) -> AIProvider | None:
     """
     Devuelve el proveedor IA solo si el usuario lo pidió y la capa está habilitada
@@ -360,6 +375,12 @@ def _render_results(
     settings = get_settings()
     ai_available = settings.ai_explanations_enabled
     can_enrich = _scan_can_enrich_with_ai(scan, ai_available=ai_available)
+    analysis_target = None
+    if scan is not None:
+        analysis_target = (scan.get("meta") or {}).get("analysis_target")
+    results_filter_url = (
+        _results_page_url(analysis_id) if analysis_id else "/analyze"
+    )
     return templates.TemplateResponse(
         request,
         "results.html",
@@ -372,6 +393,8 @@ def _render_results(
             "can_enrich_with_ai": can_enrich,
             "analysis_error": analysis_error,
             "analysis_id": analysis_id,
+            "analysis_target": analysis_target,
+            "results_filter_url": results_filter_url,
             "scan_used_ai": scan_used_ai,
             **_web_settings_context(),
             **_ai_results_status_context(
@@ -551,7 +574,14 @@ def results_view_prefs(
         hide_info=hide_info,
         group_equivalent=group_equivalent,
     )
-    return RedirectResponse(url=f"/results/{analysis_id}", status_code=303)
+    return RedirectResponse(
+        url=_results_page_url(
+            analysis_id,
+            hide_info=hide_info,
+            group_equivalent=group_equivalent,
+        ),
+        status_code=303,
+    )
 
 
 @app.post("/results/{analysis_id}/enrich-ai", response_model=None)
@@ -590,13 +620,14 @@ def results_enrich_ai(
         group_equivalent=group_equivalent,
     )
     _log_event("web_v2_enrich_ai_done", analysis_id=analysis_id)
-    query = []
-    if hide_info:
-        query.append("hide_info=true")
-    if group_equivalent:
-        query.append("group_equivalent=true")
-    suffix = f"?{'&'.join(query)}" if query else ""
-    return RedirectResponse(url=f"/results/{analysis_id}{suffix}", status_code=303)
+    return RedirectResponse(
+        url=_results_page_url(
+            analysis_id,
+            hide_info=hide_info,
+            group_equivalent=group_equivalent,
+        ),
+        status_code=303,
+    )
 
 
 @app.get("/dashboard", response_class=RedirectResponse)
@@ -743,13 +774,11 @@ def dashboard_enrich_ai(
     _log_event("dashboard_enrich_ai_start", analysis_id=analysis_id)
     get_scan_result_store().mark_ai_enriched(analysis_id.strip())
     _log_event("dashboard_enrich_ai_done", analysis_id=analysis_id)
-    query = []
-    if hide_info:
-        query.append("hide_info=true")
-    if group_equivalent:
-        query.append("group_equivalent=true")
-    suffix = f"?{'&'.join(query)}" if query else ""
-    return RedirectResponse(url=f"/results/{analysis_id.strip()}{suffix}", status_code=303)
+    aid = analysis_id.strip()
+    return RedirectResponse(
+        url=_results_page_url(aid, hide_info=hide_info, group_equivalent=group_equivalent),
+        status_code=303,
+    )
 
 
 @app.get("/health")

@@ -2,7 +2,7 @@
 
 ## Estado
 
-Aceptada (fases 0–2). Sustituye la consola monolítica `/dashboard` como experiencia principal.
+Aceptada (fases 0–4). Sustituye la consola monolítica `/dashboard` como experiencia principal.
 
 ## Contexto
 
@@ -50,6 +50,13 @@ TTL en memoria ~60 min (sin disco). Tras reinicio del proceso o caducidad, `/res
 - Banner de estado IA y mensajes según proveedor (stub/Ollama).
 - Enrich WEB-5 integrado con preferencias de vista persistidas.
 
+### Fase 4 (cerrada)
+
+- Layout split-scroll: sidebar (metadatos, filtros, índice) + panel principal de hallazgos.
+- Cabecera con objetivo y conteo; anclas `#finding-{id}` e índice navegable.
+- Filtros compartibles por query (`?hide_info=true&group_equivalent=true`).
+- Diagnóstico de herramientas colapsable; barra móvil «Nuevo análisis».
+
 ### Fuera de alcance (fases posteriores)
 
 - Informe PDF/HTML imprimible (fase 5).
@@ -74,5 +81,6 @@ TTL en memoria ~60 min (sin disco). Tras reinicio del proceso o caducidad, `/res
 - [WEB v2 issue fase 0–1](../04_delivery/issue-web-v2-fase-0-1-rutas.md)
 - [WEB v2 issue fase 2](../04_delivery/issue-web-v2-fase-2-visual.md)
 - [WEB v2 issue fase 3](../04_delivery/issue-web-v2-fase-3-ai-experience.md)
+- [WEB v2 issue fase 4](../04_delivery/issue-web-v2-fase-4-results-complete.md)
 - [ADR-003](ADR-003-ai-explanations-design.md) — capa IA
 - [WEB-5](../04_delivery/issue-web-5-enriquecer-ia-sin-reescanear.md) — enrich sin re-escanear
