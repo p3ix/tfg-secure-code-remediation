@@ -1,0 +1,132 @@
+/* Informe imprimible (WEB v2 fase 5) */
+.report-body {
+  background: #fff;
+  color: #111;
+  font-family: "Segoe UI", system-ui, sans-serif;
+  line-height: 1.45;
+}
+
+.report-page {
+  width: min(900px, calc(100vw - 2rem));
+  margin: 0 auto;
+  padding: 1.5rem 0 2.5rem;
+}
+
+.report-header {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #222;
+}
+
+.report-eyebrow {
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #555;
+  margin: 0 0 0.35rem;
+}
+
+.report-header h1 {
+  margin: 0 0 0.5rem;
+  font-size: 1.75rem;
+}
+
+.report-subtitle {
+  margin: 0;
+  color: #333;
+  font-size: 0.95rem;
+}
+
+.report-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.report-section {
+  margin-bottom: 1.5rem;
+  page-break-inside: avoid;
+}
+
+.report-section h2 {
+  font-size: 1.15rem;
+  margin: 0 0 0.65rem;
+  border-bottom: 1px solid #ccc;
+  padding-bottom: 0.25rem;
+}
+
+.report-summary-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.75rem;
+  font-size: 0.92rem;
+}
+
+.report-summary-table th,
+.report-summary-table td {
+  border: 1px solid #ccc;
+  padding: 0.4rem 0.55rem;
+  text-align: left;
+}
+
+.report-finding {
+  margin-bottom: 1rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #e0e0e0;
+  page-break-inside: avoid;
+}
+
+.report-finding h3 {
+  margin: 0 0 0.35rem;
+  font-size: 1rem;
+}
+
+.report-finding-meta {
+  margin: 0 0 0.35rem;
+  font-size: 0.88rem;
+  color: #444;
+}
+
+.report-ai-block {
+  margin-top: 0.5rem;
+  padding: 0.55rem 0.65rem;
+  background: #f4f8ff;
+  border-left: 3px solid #4a7fc1;
+  font-size: 0.9rem;
+}
+
+.report-disclaimer {
+  font-size: 0.88rem;
+  color: #444;
+}
+
+.report-filters-note,
+.report-error {
+  color: #555;
+  font-size: 0.92rem;
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  .report-page {
+    width: 100%;
+    padding: 0;
+  }
+
+  .report-body {
+    background: #fff;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .report-finding {
+    page-break-inside: avoid;
+  }
+}

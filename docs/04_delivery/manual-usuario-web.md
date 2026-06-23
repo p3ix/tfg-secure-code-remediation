@@ -112,7 +112,8 @@ Consulta rápida: `GET /ai/status` devuelve flags y límites en JSON.
 
 - La capa de explicación IA es opcional; el núcleo SAST no depende de ella.
 - Los parches automáticos cubren patrones MVP concretos; la web prioriza visibilidad del escaneo.
-- El informe exportable imprimible está previsto en una fase posterior (`/results/{id}/report`).
+- El informe exportable imprimible está en `/results/{analysis_id}/report` (botón «Imprimir / guardar PDF» del navegador).
+- JSON completo: `/results/{analysis_id}/export.json` (enlace «Exportar JSON» en resultados).
 
 ---
 

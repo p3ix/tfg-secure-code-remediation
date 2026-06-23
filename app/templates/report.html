@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Informe · {{ scan.meta.analysis_target if scan else 'Resultado no disponible' }}</title>
+  <link rel="stylesheet" href="/static/web.css" />
+  <link rel="stylesheet" href="/static/report.css" />
+</head>
+<body class="report-body">
+  <div class="report-page">
+    {% if analysis_error %}
+    <header class="report-header">
+      <h1>Informe no disponible</h1>
+      <p class="report-error">{{ analysis_error }}</p>
+      <p class="no-print"><a href="/analyze">Volver a nuevo análisis</a></p>
+    </header>
+    {% elif scan %}
+    <header class="report-header">
+      <p class="report-eyebrow">Informe de análisis SAST · TFG Secure Code Remediation</p>
+      <h1>Informe de seguridad Python</h1>
+      <p class="report-subtitle">
+        Objetivo: <strong>{{ scan.meta.analysis_target }}</strong> ·
+        Generado: {{ scan.meta.generated_at }} ·
+        Analysis ID: <code>{{ scan.meta.analysis_id }}</code>
+      </p>
+      <div class="report-actions no-print">
+        <button class="button button--compact" type="button" onclick="window.print()">
+          Imprimir / guardar PDF
+        </button>
+        <a class="button button--ghost button--compact" href="{{ results_url }}">Volver a resultados</a>
+        <a class="button button--ghost button--compact" href="{{ export_url }}">Descargar JSON</a>
+      </div>
+    </header>
+
+    <section class="report-section">
+      <h2>Resumen ejecutivo</h2>
+      <p>
+        Análisis estático con <strong>Bandit</strong> y <strong>Semgrep</strong> sobre el objetivo indicado.
+        Modo de ejecución: <code>{{ scan.meta.execution_mode }}</code>.
+        Hallazgos visibles con los filtros actuales: <strong>{{ scan.summary.total_findings }}</strong>.
+      </p>
+      {% if hide_info or group_equivalent %}
+      <p class="report-filters-note">
+        Filtros activos:
+        {% if hide_info %}ocultar baja severidad{% endif %}
+        {% if hide_info and group_equivalent %} · {% endif %}
+        {% if group_equivalent %}agrupar equivalentes{% endif %}.
+      </p>
+      {% endif %}
+      <table class="report-summary-table">
+        <thead>
+          <tr><th>Severidad</th><th>Total</th></tr>
+        </thead>
+        <tbody>
+          {% for sev, n in scan.summary.by_severity.items() %}
+          <tr><td>{{ sev }}</td><td>{{ n }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+
+    <section class="report-section">
+      <h2>Metodología</h2>
+      <p>
+        El pipeline ejecuta Bandit y Semgrep sobre el código aportado, normaliza los hallazgos a un
+        esquema presentable (<code>schema_version {{ scan.schema_version }}</code>) y opcionalmente
+        enriquece con explicaciones IA (sin sustituir la verificación de las herramientas SAST).
+      </p>
+      {% if scan_used_ai %}
+      <p>Este informe incluye explicaciones IA generadas durante o tras el escaneo.</p>
+      {% elif ai_explanations_available %}
+      <p>Este informe se generó sin explicaciones IA; el análisis SAST sigue siendo válido.</p>
+      {% else %}
+      <p>La capa IA estaba desactivada en el servidor al generar este informe.</p>
+      {% endif %}
+    </section>
+
+    <section class="report-section">
+      <h2>Hallazgos</h2>
+      {% if scan.findings|length == 0 %}
+      <p>No hay hallazgos visibles con los filtros aplicados.</p>
+      {% endif %}
+      {% for row in scan.findings %}
+      <article class="report-finding">
+        <h3>#{{ row.id }} · {{ row.title }}</h3>
+        <p class="report-finding-meta">
+          <strong>{{ row.severity_label }}</strong> ·
+          <code>{{ row.file }}:{{ row.line_start }}</code> ·
+          {{ row.tool }} / <code>{{ row.rule_id }}</code> ·
+          <code>{{ row.category }}</code>
+        </p>
+        <p>{{ row.message }}</p>
+        {% if row.ai_explanation %}
+        <div class="report-ai-block">
+          <strong>Explicación IA</strong> ({{ row.ai_explanation.provider }}/{{ row.ai_explanation.model }})
+          <p>{{ row.ai_explanation.summary }}</p>
+          {% if row.ai_explanation.suggestion %}
+          <p><em>Sugerencia:</em> {{ row.ai_explanation.suggestion }}</p>
+          {% endif %}
+        </div>
+        {% endif %}
+      </article>
+      {% endfor %}
+    </section>
+
+    <section class="report-section report-disclaimer">
+      <h2>Notas y limitaciones</h2>
+      <p>{{ scan.meta.note }}</p>
+      {% if scan.meta.presentable_filter_note %}<p>{{ scan.meta.presentable_filter_note }}</p>{% endif %}
+      {% if scan.meta.group_equivalent_note %}<p>{{ scan.meta.group_equivalent_note }}</p>{% endif %}
+      <p>
+        Las explicaciones IA, si aparecen, son orientativas y pueden contener errores.
+        La detección primaria proviene de Bandit y Semgrep.
+      </p>
+    </section>
+    {% endif %}
+  </div>
+</body>
+</html>
