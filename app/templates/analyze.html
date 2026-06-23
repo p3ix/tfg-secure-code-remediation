@@ -5,8 +5,9 @@
   <span class="eyebrow">Nuevo análisis</span>
   <h1>Lanza un escaneo sobre tu proyecto Python</h1>
   <p class="hero-copy">
-    Elige el origen del código, opcionalmente incluye explicaciones IA, y verás los resultados
-    en una página dedicada. Para pruebas: <code>vulnerable_demo.zip</code>.
+    Elige el origen del código y si quieres explicaciones IA en el mismo paso. Los filtros
+    de vista se aplican después en la página de resultados. Para pruebas:
+    <code>vulnerable_demo.zip</code>.
   </p>
 </section>
 
@@ -92,39 +93,45 @@
       </div>
     </section>
 
-    <section class="analyze-section" aria-labelledby="analyze-options-title">
+    <section class="analyze-section ai-options-section" aria-labelledby="analyze-ai-title">
       <div class="analyze-section-head">
         <span class="step-num" aria-hidden="true">2</span>
-        <h2 id="analyze-options-title" class="section-title">Opciones de vista</h2>
+        <h2 id="analyze-ai-title" class="section-title">Explicaciones IA</h2>
       </div>
-      <div class="option-list">
-        <label class="toggle">
-          <input type="checkbox" name="hide_info" value="true" {% if hide_info %}checked{% endif %} />
+      {% if ai_explanations_available %}
+      <div class="ai-choice-card">
+        <label class="toggle ai-toggle-prominent">
+          <input
+            type="checkbox"
+            name="enable_ai_explanations"
+            value="true"
+            id="enable-ai-explanations"
+            {% if enable_ai_explanations %}checked{% endif %}
+          />
           <span>
-            <strong>Ocultar informativos / baja severidad</strong><br />
-            <span class="muted">Reduce ruido en la lista de hallazgos.</span>
-          </span>
-        </label>
-        <label class="toggle">
-          <input type="checkbox" name="group_equivalent" value="true" {% if group_equivalent %}checked{% endif %} />
-          <span>
-            <strong>Agrupar equivalentes</strong><br />
-            <span class="muted">Mismo fichero, línea y categoría MVP.</span>
-          </span>
-        </label>
-        {% if ai_explanations_available %}
-        <label class="toggle">
-          <input type="checkbox" name="enable_ai_explanations" value="true" {% if enable_ai_explanations %}checked{% endif %} />
-          <span>
-            <strong>Incluir explicaciones IA</strong><br />
-            <span class="muted">Proveedor: <code>{{ ai_provider_label }}</code>. Sin marcar, el análisis es más rápido.</span>
+            <strong>Incluir explicaciones IA en este escaneo</strong><br />
+            <span class="muted">
+              Proveedor activo: <code>{{ ai_provider_label }}</code>.
+              Si no marcas esta opción, el SAST será más rápido y podrás añadir IA después en resultados.
+            </span>
           </span>
         </label>
         <p class="form-hint form-hint--ai" id="ai-duration-hint" hidden>
-          Con IA activada puede tardar más (proveedor: <code>{{ ai_provider_label }}</code>).
+          {{ ai_provider_hint }}
         </p>
-        {% endif %}
+        <p class="form-hint form-hint--ai ai-hint-static">
+          Sin marcar: solo Bandit + Semgrep. Marcado: se generan explicaciones por hallazgo
+          durante el análisis.
+        </p>
       </div>
+      {% else %}
+      <div class="status notice" role="status">
+        <strong>IA no disponible en este servidor</strong><br />
+        Las explicaciones están desactivadas (<code>TFG_AI_EXPLANATIONS_ENABLED=0</code>).
+        El análisis con Bandit y Semgrep funciona igual; activa la variable en el servidor
+        o en <code>.env</code> para la defensa.
+      </div>
+      {% endif %}
     </section>
 
     <section class="analyze-section" aria-labelledby="analyze-submit-title">
@@ -138,6 +145,7 @@
         type="submit"
         id="analyze-submit"
         data-loading-label="Analizando…"
+        data-ai-provider="{{ ai_provider_label }}"
       >
         Lanzar análisis
       </button>

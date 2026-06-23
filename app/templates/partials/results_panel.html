@@ -1,3 +1,7 @@
+        {% include "partials/ai_status_banner.html" %}
+
+        {% include "partials/view_filters_form.html" %}
+
         <div class="results-head">
           <div>
             <h2 class="section-title">Resumen</h2>
@@ -28,12 +32,10 @@
             name="group_equivalent"
             value="{{ 'true' if group_equivalent else 'false' }}"
           />
-          <p class="form-hint form-hint--ai" style="margin: 0;">
+          <p class="form-hint form-hint--ai enrich-ai-hint">
             Este resultado se analizó sin IA. Puedes generar explicaciones sin repetir
             Bandit/Semgrep (proveedor: <code>{{ ai_provider_label }}</code>).
-            {% if ai_provider_label == 'ollama' %}
-            Puede tardar varios segundos por hallazgo.
-            {% endif %}
+            {{ ai_provider_hint }}
           </p>
           <p class="form-status" id="enrich-form-status" role="status" aria-live="polite" hidden></p>
           <button

@@ -21,7 +21,14 @@
           status.hidden = false;
           let message = defaultLoadingMessage;
           if (form.id === "dashboard-analyze-form" && aiCheckbox && aiCheckbox.checked) {
-            message += " Incluye explicaciones IA; puede tardar más de lo habitual.";
+            const provider = analyzeSubmit?.dataset.aiProvider || "ia";
+            message += " Incluye explicaciones IA";
+            if (provider === "ollama") {
+              message += " (Ollama; puede tardar varios segundos por hallazgo)";
+            } else {
+              message += ` (proveedor: ${provider})`;
+            }
+            message += ".";
           }
           status.textContent = message;
         }

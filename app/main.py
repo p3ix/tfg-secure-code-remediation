@@ -170,9 +170,11 @@ def _build_dashboard_scan(
 
 def _web_settings_context() -> dict:
     settings = get_settings()
+    provider = settings.ai_provider
     return {
         "ai_explanations_available": settings.ai_explanations_enabled,
-        "ai_provider_label": settings.ai_provider,
+        "ai_provider_label": provider,
+        "ai_provider_hint": _ai_provider_hint(provider),
         "local_path_enabled": settings.enable_local_path
         and settings.local_analysis_root is not None,
         "enable_local_path": settings.enable_local_path,
@@ -212,7 +214,74 @@ def _enrich_presentable_scan(
     return filter_presentable_scan(scan, hide_info=hide_info)
 
 
-    return filter_presentable_scan(scan, hide_info=hide_info)
+def _ai_provider_hint(provider: str) -> str:
+    if provider == "ollama":
+        return (
+            "Ollama genera una explicación por hallazgo; puede tardar varios segundos "
+            "en proyectos grandes."
+        )
+    if provider == "stub":
+        return (
+            "Modo stub: respuestas deterministas útiles para demostración y pruebas "
+            "sin modelo externo."
+        )
+    return f"Proveedor configurado: {provider}."
+
+
+def _ai_results_status_context(
+    *,
+    scan: dict | None,
+    scan_used_ai: bool,
+    can_enrich_with_ai: bool,
+    ai_available: bool,
+    provider: str,
+) -> dict[str, str]:
+    if scan is None:
+        return {
+            "ai_status_kind": "neutral",
+            "ai_status_label": "IA",
+            "ai_status_message": "",
+        }
+    if not ai_available:
+        return {
+            "ai_status_kind": "off",
+            "ai_status_label": "IA desactivada",
+            "ai_status_message": (
+                "Las explicaciones IA no están habilitadas en el servidor "
+                "(TFG_AI_EXPLANATIONS_ENABLED=0). El análisis SAST no depende de ellas."
+            ),
+        }
+    if scan_used_ai:
+        return {
+            "ai_status_kind": "on",
+            "ai_status_label": "Con explicaciones IA",
+            "ai_status_message": (
+                f"Este escaneo incluyó explicaciones generadas con {provider}. "
+                "Puedes ajustar los filtros de vista sin repetir el análisis."
+            ),
+        }
+    if can_enrich_with_ai:
+        hint = _ai_provider_hint(provider)
+        return {
+            "ai_status_kind": "pending",
+            "ai_status_label": "Sin IA en este escaneo",
+            "ai_status_message": (
+                "Puedes añadir explicaciones abajo sin volver a ejecutar Bandit ni Semgrep. "
+                + hint
+            ),
+        }
+    findings = scan.get("findings") or []
+    if not findings:
+        return {
+            "ai_status_kind": "neutral",
+            "ai_status_label": "Sin hallazgos",
+            "ai_status_message": "No hay filas que enriquecer con IA en este resultado.",
+        }
+    return {
+        "ai_status_kind": "on",
+        "ai_status_label": "Explicaciones IA completas",
+        "ai_status_message": "Todos los hallazgos visibles ya incluyen explicación IA.",
+    }
 
 
 def _persist_web_scan(
@@ -257,8 +326,6 @@ def _render_analyze(
     request: Request,
     *,
     analysis_mode: str = "upload_zip",
-    hide_info: bool = False,
-    group_equivalent: bool = False,
     enable_ai_explanations: bool = False,
     analysis_error: str | None = None,
     local_path_value: str = "",
@@ -271,8 +338,6 @@ def _render_analyze(
             "request": request,
             "nav_active": "analyze",
             "analysis_mode": analysis_mode,
-            "hide_info": hide_info,
-            "group_equivalent": group_equivalent,
             "enable_ai_explanations": enable_ai_explanations,
             "analysis_error": analysis_error,
             "local_path_value": local_path_value,
@@ -289,9 +354,12 @@ def _render_results(
     hide_info: bool = False,
     group_equivalent: bool = False,
     analysis_error: str | None = None,
+    analysis_id: str | None = None,
+    scan_used_ai: bool = False,
 ) -> HTMLResponse:
     settings = get_settings()
     ai_available = settings.ai_explanations_enabled
+    can_enrich = _scan_can_enrich_with_ai(scan, ai_available=ai_available)
     return templates.TemplateResponse(
         request,
         "results.html",
@@ -301,9 +369,18 @@ def _render_results(
             "scan": scan,
             "hide_info": hide_info,
             "group_equivalent": group_equivalent,
-            "can_enrich_with_ai": _scan_can_enrich_with_ai(scan, ai_available=ai_available),
+            "can_enrich_with_ai": can_enrich,
             "analysis_error": analysis_error,
+            "analysis_id": analysis_id,
+            "scan_used_ai": scan_used_ai,
             **_web_settings_context(),
+            **_ai_results_status_context(
+                scan=scan,
+                scan_used_ai=scan_used_ai,
+                can_enrich_with_ai=can_enrich,
+                ai_available=ai_available,
+                provider=settings.ai_provider,
+            ),
         },
     )
 
@@ -415,8 +492,6 @@ async def analyze_submit(
         return _render_analyze(
             request,
             analysis_mode=analysis_mode,
-            hide_info=hide_info,
-            group_equivalent=group_equivalent,
             enable_ai_explanations=enable_ai_explanations,
             analysis_error=f"[{code}] {msg} (analysis_id={analysis_id})",
             local_path_value=local_path,
@@ -444,8 +519,39 @@ def results_page(
         )
     hi = hide_info if hide_info is not None else stored.hide_info
     ge = group_equivalent if group_equivalent is not None else stored.group_equivalent
+    if hide_info is not None or group_equivalent is not None:
+        get_scan_result_store().update_view_prefs(
+            analysis_id,
+            hide_info=hi,
+            group_equivalent=ge,
+        )
     scan = _scan_from_stored(stored, hide_info=hi, group_equivalent=ge)
-    return _render_results(request, scan=scan, hide_info=hi, group_equivalent=ge)
+    return _render_results(
+        request,
+        scan=scan,
+        hide_info=hi,
+        group_equivalent=ge,
+        analysis_id=analysis_id,
+        scan_used_ai=stored.enable_ai_explanations,
+    )
+
+
+@app.post("/results/{analysis_id}/view-prefs", response_model=None)
+def results_view_prefs(
+    analysis_id: str,
+    hide_info: bool = Form(False),
+    group_equivalent: bool = Form(False),
+) -> RedirectResponse:
+    """Actualiza filtros de vista sin re-ejecutar SAST."""
+    stored = get_scan_result_store().get(analysis_id)
+    if stored is None:
+        return RedirectResponse(url=f"/results/{analysis_id}", status_code=303)
+    get_scan_result_store().update_view_prefs(
+        analysis_id,
+        hide_info=hide_info,
+        group_equivalent=group_equivalent,
+    )
+    return RedirectResponse(url=f"/results/{analysis_id}", status_code=303)
 
 
 @app.post("/results/{analysis_id}/enrich-ai", response_model=None)
@@ -478,6 +584,11 @@ def results_enrich_ai(
         )
     _log_event("web_v2_enrich_ai_start", analysis_id=analysis_id)
     get_scan_result_store().mark_ai_enriched(analysis_id)
+    get_scan_result_store().update_view_prefs(
+        analysis_id,
+        hide_info=hide_info,
+        group_equivalent=group_equivalent,
+    )
     _log_event("web_v2_enrich_ai_done", analysis_id=analysis_id)
     query = []
     if hide_info:
@@ -591,8 +702,6 @@ async def dashboard_analyze(
         return _render_analyze(
             request,
             analysis_mode=analysis_mode,
-            hide_info=hide_info,
-            group_equivalent=group_equivalent,
             enable_ai_explanations=enable_ai_explanations,
             analysis_error=f"[{code}] {msg} (analysis_id={analysis_id})",
             local_path_value=local_path,
