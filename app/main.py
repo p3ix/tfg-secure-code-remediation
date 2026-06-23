@@ -11,7 +11,7 @@ from fastapi import (
     Request,
     UploadFile,
 )
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from starlette.templating import Jinja2Templates
@@ -138,6 +138,53 @@ def _attach_analysis_id(payload: dict, analysis_id: str) -> dict:
 
 def _log_event(event: str, *, analysis_id: str, **fields: object) -> None:
     logger.info("event=%s analysis_id=%s payload=%s", event, analysis_id, fields)
+
+
+def _results_page_url(
+    analysis_id: str,
+    *,
+    hide_info: bool = False,
+    group_equivalent: bool = False,
+) -> str:
+    params: list[str] = []
+    if hide_info:
+        params.append("hide_info=true")
+    if group_equivalent:
+        params.append("group_equivalent=true")
+    query = f"?{'&'.join(params)}" if params else ""
+    return f"/results/{analysis_id}{query}"
+
+
+def _results_resource_url(
+    analysis_id: str,
+    resource: str,
+    *,
+    hide_info: bool = False,
+    group_equivalent: bool = False,
+) -> str:
+    params: list[str] = []
+    if hide_info:
+        params.append("hide_info=true")
+    if group_equivalent:
+        params.append("group_equivalent=true")
+    query = f"?{'&'.join(params)}" if params else ""
+    return f"/results/{analysis_id}/{resource}{query}"
+
+
+def _presentable_for_analysis_id(
+    analysis_id: str,
+    *,
+    hide_info: bool | None = None,
+    group_equivalent: bool | None = None,
+):
+    """Carga presentable desde almacén; None si expiró."""
+    stored = get_scan_result_store().get(analysis_id)
+    if stored is None:
+        return None, None, False, False
+    hi = hide_info if hide_info is not None else stored.hide_info
+    ge = group_equivalent if group_equivalent is not None else stored.group_equivalent
+    scan = _scan_from_stored(stored, hide_info=hi, group_equivalent=ge)
+    return stored, scan, hi, ge
 
 
 def _resolve_ai_provider(*, user_requested: bool) -> AIProvider | None:
@@ -360,6 +407,32 @@ def _render_results(
     settings = get_settings()
     ai_available = settings.ai_explanations_enabled
     can_enrich = _scan_can_enrich_with_ai(scan, ai_available=ai_available)
+    analysis_target = None
+    if scan is not None:
+        analysis_target = (scan.get("meta") or {}).get("analysis_target")
+    results_filter_url = (
+        _results_page_url(analysis_id) if analysis_id else "/analyze"
+    )
+    report_url = (
+        _results_resource_url(
+            analysis_id,
+            "report",
+            hide_info=hide_info,
+            group_equivalent=group_equivalent,
+        )
+        if analysis_id
+        else None
+    )
+    export_url = (
+        _results_resource_url(
+            analysis_id,
+            "export.json",
+            hide_info=hide_info,
+            group_equivalent=group_equivalent,
+        )
+        if analysis_id
+        else None
+    )
     return templates.TemplateResponse(
         request,
         "results.html",
@@ -372,6 +445,10 @@ def _render_results(
             "can_enrich_with_ai": can_enrich,
             "analysis_error": analysis_error,
             "analysis_id": analysis_id,
+            "analysis_target": analysis_target,
+            "results_filter_url": results_filter_url,
+            "report_url": report_url,
+            "export_url": export_url,
             "scan_used_ai": scan_used_ai,
             **_web_settings_context(),
             **_ai_results_status_context(
@@ -536,6 +613,84 @@ def results_page(
     )
 
 
+@app.get("/results/{analysis_id}/export.json")
+def results_export_json(
+    analysis_id: str,
+    hide_info: bool | None = Query(default=None),
+    group_equivalent: bool | None = Query(default=None),
+) -> JSONResponse:
+    """Exporta el presentable JSON del análisis (mismos filtros que la vista web)."""
+    stored, scan, hi, ge = _presentable_for_analysis_id(
+        analysis_id,
+        hide_info=hide_info,
+        group_equivalent=group_equivalent,
+    )
+    if stored is None or scan is None:
+        raise HTTPException(
+            status_code=404,
+            detail=_error_detail(
+                "SCAN_RESULT_EXPIRED",
+                "El resultado del análisis ya no está disponible en el servidor.",
+                analysis_id=analysis_id,
+            ),
+        )
+    return JSONResponse(content=scan)
+
+
+@app.get("/results/{analysis_id}/report", response_class=HTMLResponse)
+def results_report_page(
+    request: Request,
+    analysis_id: str,
+    hide_info: bool | None = Query(default=None),
+    group_equivalent: bool | None = Query(default=None),
+) -> HTMLResponse:
+    """Informe HTML imprimible para memoria / defensa del TFG."""
+    stored, scan, hi, ge = _presentable_for_analysis_id(
+        analysis_id,
+        hide_info=hide_info,
+        group_equivalent=group_equivalent,
+    )
+    if stored is None or scan is None:
+        return templates.TemplateResponse(
+            request,
+            "report.html",
+            {
+                "request": request,
+                "scan": None,
+                "analysis_error": (
+                    f"[SCAN_RESULT_EXPIRED] El resultado ya no está disponible "
+                    f"(analysis_id={analysis_id})."
+                ),
+                "analysis_id": analysis_id,
+                "hide_info": False,
+                "group_equivalent": False,
+                "results_url": f"/results/{analysis_id}",
+            },
+        )
+    settings = get_settings()
+    return templates.TemplateResponse(
+        request,
+        "report.html",
+        {
+            "request": request,
+            "scan": scan,
+            "analysis_error": None,
+            "analysis_id": analysis_id,
+            "hide_info": hi,
+            "group_equivalent": ge,
+            "results_url": _results_page_url(analysis_id, hide_info=hi, group_equivalent=ge),
+            "export_url": _results_resource_url(
+                analysis_id,
+                "export.json",
+                hide_info=hi,
+                group_equivalent=ge,
+            ),
+            "scan_used_ai": stored.enable_ai_explanations,
+            "ai_explanations_available": settings.ai_explanations_enabled,
+        },
+    )
+
+
 @app.post("/results/{analysis_id}/view-prefs", response_model=None)
 def results_view_prefs(
     analysis_id: str,
@@ -551,7 +706,14 @@ def results_view_prefs(
         hide_info=hide_info,
         group_equivalent=group_equivalent,
     )
-    return RedirectResponse(url=f"/results/{analysis_id}", status_code=303)
+    return RedirectResponse(
+        url=_results_page_url(
+            analysis_id,
+            hide_info=hide_info,
+            group_equivalent=group_equivalent,
+        ),
+        status_code=303,
+    )
 
 
 @app.post("/results/{analysis_id}/enrich-ai", response_model=None)
@@ -590,13 +752,14 @@ def results_enrich_ai(
         group_equivalent=group_equivalent,
     )
     _log_event("web_v2_enrich_ai_done", analysis_id=analysis_id)
-    query = []
-    if hide_info:
-        query.append("hide_info=true")
-    if group_equivalent:
-        query.append("group_equivalent=true")
-    suffix = f"?{'&'.join(query)}" if query else ""
-    return RedirectResponse(url=f"/results/{analysis_id}{suffix}", status_code=303)
+    return RedirectResponse(
+        url=_results_page_url(
+            analysis_id,
+            hide_info=hide_info,
+            group_equivalent=group_equivalent,
+        ),
+        status_code=303,
+    )
 
 
 @app.get("/dashboard", response_class=RedirectResponse)
@@ -743,13 +906,11 @@ def dashboard_enrich_ai(
     _log_event("dashboard_enrich_ai_start", analysis_id=analysis_id)
     get_scan_result_store().mark_ai_enriched(analysis_id.strip())
     _log_event("dashboard_enrich_ai_done", analysis_id=analysis_id)
-    query = []
-    if hide_info:
-        query.append("hide_info=true")
-    if group_equivalent:
-        query.append("group_equivalent=true")
-    suffix = f"?{'&'.join(query)}" if query else ""
-    return RedirectResponse(url=f"/results/{analysis_id.strip()}{suffix}", status_code=303)
+    aid = analysis_id.strip()
+    return RedirectResponse(
+        url=_results_page_url(aid, hide_info=hide_info, group_equivalent=group_equivalent),
+        status_code=303,
+    )
 
 
 @app.get("/health")

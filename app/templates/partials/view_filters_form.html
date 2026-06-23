@@ -1,35 +1,32 @@
 {% if scan and analysis_id %}
 <form
   id="results-view-filters"
-  class="view-filters-bar"
-  method="post"
-  action="/results/{{ analysis_id }}/view-prefs"
+  class="view-filters-bar view-filters-bar--compact"
+  method="get"
+  action="/results/{{ analysis_id }}"
   aria-labelledby="view-filters-title"
 >
   <div>
     <h3 id="view-filters-title" class="section-title">Filtros de vista</h3>
-    <p class="section-copy" style="margin-bottom: 0;">
-      Ajusta el listado sin volver a ejecutar Bandit ni Semgrep.
+    <p class="section-copy view-filters-copy">
+      Sin re-escanear. La URL incluye los parámetros para compartir.
     </p>
   </div>
-  <div class="option-list view-filters-options">
-    <label class="toggle">
-      <input type="checkbox" name="hide_info" value="true" {% if hide_info %}checked{% endif %} />
-      <span>
-        <strong>Ocultar informativos / baja severidad</strong>
-      </span>
-    </label>
-    <label class="toggle">
-      <input
-        type="checkbox"
-        name="group_equivalent"
-        value="true"
-        {% if group_equivalent %}checked{% endif %}
-      />
-      <span>
-        <strong>Agrupar equivalentes</strong>
-      </span>
-    </label>
+  <div class="view-filters-fields">
+    <div class="field">
+      <label for="filter-hide-info">Ocultar baja severidad</label>
+      <select id="filter-hide-info" name="hide_info">
+        <option value="false" {% if not hide_info %}selected{% endif %}>No</option>
+        <option value="true" {% if hide_info %}selected{% endif %}>Sí</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="filter-group-equiv">Agrupar equivalentes</label>
+      <select id="filter-group-equiv" name="group_equivalent">
+        <option value="false" {% if not group_equivalent %}selected{% endif %}>No</option>
+        <option value="true" {% if group_equivalent %}selected{% endif %}>Sí</option>
+      </select>
+    </div>
   </div>
   <button class="button button--secondary button--compact" type="submit">
     Aplicar filtros

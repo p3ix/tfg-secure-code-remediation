@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 
 from app.config import get_settings
 from app.main import app
+from tests.web_html_assertions import html_has_analysis_id
 
 client = TestClient(app)
 
@@ -117,7 +118,7 @@ def test_release_dashboard_local_path_success_when_configured(
         )
         assert response.status_code == 200
         assert "local:demo" in response.text
-        assert "Analysis ID:" in response.text
+        assert html_has_analysis_id(response.text)
     finally:
         get_settings.cache_clear()
 

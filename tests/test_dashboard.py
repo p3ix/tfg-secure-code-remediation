@@ -3,6 +3,7 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 
 from app.main import app
+from tests.web_html_assertions import html_has_analysis_id
 
 client = TestClient(app)
 
@@ -136,7 +137,7 @@ def test_dashboard_analyze_zip_uses_uploaded_file(monkeypatch) -> None:
     assert response.status_code == 200
     assert "upload.zip" in response.text
     assert "unsafe_yaml_load" in response.text
-    assert "Analysis ID:" in response.text
+    assert html_has_analysis_id(response.text)
 
 
 def test_dashboard_analyze_zip_rejects_non_zip_file() -> None:
@@ -197,7 +198,7 @@ def test_dashboard_renders_empty_findings_state(monkeypatch) -> None:
         follow_redirects=True,
     )
     assert response.status_code == 200
-    assert "Sin hallazgos en esta ejecución" in response.text
+    assert "Sin hallazgos visibles" in response.text
 
 
 def test_dashboard_analyze_local_path_error_is_rendered(monkeypatch) -> None:
@@ -236,7 +237,7 @@ def test_dashboard_analyze_git_clone_success(monkeypatch) -> None:
     )
     assert response.status_code == 200
     assert "git:https://github.com/octocat/Hello-World.git" in response.text
-    assert "Analysis ID:" in response.text
+    assert html_has_analysis_id(response.text)
 
 
 def test_dashboard_analyze_git_clone_requires_url(monkeypatch) -> None:

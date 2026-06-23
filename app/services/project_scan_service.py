@@ -220,16 +220,20 @@ def analyze_directory(
         )
 
         if not bandit_report.exists():
+            stderr = _preview_output(bandit_result.stderr)
             raise RuntimeError(
                 "Bandit no generó informe. "
                 f"returncode={bandit_result.returncode}. "
                 "Comprueba instalación/configuración y el árbol analizado."
+                + (f" Detalle: {stderr}" if stderr else "")
             )
         if not semgrep_report.exists():
+            stderr = _preview_output(semgrep_result.stderr)
             raise RuntimeError(
                 "Semgrep no generó informe. "
                 f"returncode={semgrep_result.returncode}. "
                 "Comprueba red/reglas/configuración si aplica."
+                + (f" Detalle: {stderr}" if stderr else "")
             )
 
         findings = load_all_findings(

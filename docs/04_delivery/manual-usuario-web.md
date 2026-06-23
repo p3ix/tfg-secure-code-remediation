@@ -38,7 +38,7 @@ En producción (VPS) se configura en `.env`. Con `stub` no hace falta Ollama; co
 2. En **`/analyze`**, elegir **Subir ZIP** y seleccionar `vulnerable_demo.zip` (incluido en la raíz del repositorio para pruebas).
 3. Opcional: marcar **Incluir explicaciones IA** o dejarlo sin marcar y añadirlas después en resultados.
 4. Pulsar **Lanzar análisis**. Tras unos segundos se redirige a **`/results/{analysis_id}`**.
-5. Revisar resumen, diagnóstico Bandit/Semgrep y listado de hallazgos. Si el análisis fue sin IA, usar **Añadir explicaciones IA a este resultado**.
+5. Revisar resumen, índice de hallazgos, diagnóstico Bandit/Semgrep y detalle. Si el análisis fue sin IA, usar **Añadir explicaciones IA** en la barra lateral.
 
 ## 4. Formulario de análisis (`/analyze`)
 
@@ -65,7 +65,9 @@ Al enviar el formulario, el botón muestra estado de carga (`Analizando…`) y u
 Tras un análisis correcto se muestra:
 
 - **Banner de estado IA:** indica si el escaneo incluyó IA, si está pendiente de enrich o si la capa está desactivada en el servidor.
-- **Filtros de vista:** formulario para ocultar baja severidad o agrupar equivalentes **sin re-ejecutar** Bandit/Semgrep.
+- **Filtros de vista:** selects para ocultar baja severidad o agrupar equivalentes **sin re-ejecutar** Bandit/Semgrep. La URL incluye `?hide_info=true&group_equivalent=true` para compartir la vista.
+- **Layout en dos columnas (escritorio):** barra lateral con metadatos, totales, filtros e índice de hallazgos; panel principal con el detalle y scroll independiente.
+- **Índice navegable:** enlaces a cada hallazgo (`#finding-1`, …).
 
 - **Objetivo** (`analysis_target`): qué se ha analizado.
 - **Modo de ejecución:** p. ej. `runtime`.
@@ -110,7 +112,8 @@ Consulta rápida: `GET /ai/status` devuelve flags y límites en JSON.
 
 - La capa de explicación IA es opcional; el núcleo SAST no depende de ella.
 - Los parches automáticos cubren patrones MVP concretos; la web prioriza visibilidad del escaneo.
-- El informe exportable imprimible está previsto en una fase posterior (`/results/{id}/report`).
+- El informe exportable imprimible está en `/results/{analysis_id}/report` (botón «Imprimir / guardar PDF» del navegador).
+- JSON completo: `/results/{analysis_id}/export.json` (enlace «Exportar JSON» en resultados).
 
 ---
 

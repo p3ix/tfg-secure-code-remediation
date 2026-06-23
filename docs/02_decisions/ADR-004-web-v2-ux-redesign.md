@@ -2,7 +2,7 @@
 
 ## Estado
 
-Aceptada (fases 0–2). Sustituye la consola monolítica `/dashboard` como experiencia principal.
+Aceptada (fases 0–5). Sustituye la consola monolítica `/dashboard` como experiencia principal.
 
 ## Contexto
 
@@ -28,6 +28,8 @@ El núcleo backend (SAST, presentable, IA, almacén efímero) se reutiliza.
 | `/analyze` | POST | Ejecuta SAST; guarda en `ScanResultStore`; redirect 303 → `/results/{analysis_id}` |
 | `/results/{analysis_id}` | GET | Resultados presentables; filtros vía query |
 | `/results/{analysis_id}/enrich-ai` | POST | Añade IA sin re-escanear; redirect al mismo resultado |
+| `/results/{analysis_id}/report` | GET | Informe HTML imprimible |
+| `/results/{analysis_id}/export.json` | GET | Exportación JSON del presentable |
 
 ### Compatibilidad
 
@@ -50,9 +52,21 @@ TTL en memoria ~60 min (sin disco). Tras reinicio del proceso o caducidad, `/res
 - Banner de estado IA y mensajes según proveedor (stub/Ollama).
 - Enrich WEB-5 integrado con preferencias de vista persistidas.
 
+### Fase 4 (cerrada)
+
+- Layout split-scroll: sidebar (metadatos, filtros, índice) + panel principal de hallazgos.
+- Cabecera con objetivo y conteo; anclas `#finding-{id}` e índice navegable.
+- Filtros compartibles por query (`?hide_info=true&group_equivalent=true`).
+- Diagnóstico de herramientas colapsable; barra móvil «Nuevo análisis».
+
+### Fase 5 (cerrada)
+
+- `GET /results/{analysis_id}/report` — HTML imprimible (`report.html`, `report.css`).
+- `GET /results/{analysis_id}/export.json` — presentable JSON con filtros vía query.
+- Enlaces «Informe imprimible» y «Exportar JSON» en resultados.
+
 ### Fuera de alcance (fases posteriores)
 
-- Informe PDF/HTML imprimible (fase 5).
 - Despliegue VPS documentado (fase 6).
 
 ### Fase 2 (cerrada)
@@ -74,5 +88,7 @@ TTL en memoria ~60 min (sin disco). Tras reinicio del proceso o caducidad, `/res
 - [WEB v2 issue fase 0–1](../04_delivery/issue-web-v2-fase-0-1-rutas.md)
 - [WEB v2 issue fase 2](../04_delivery/issue-web-v2-fase-2-visual.md)
 - [WEB v2 issue fase 3](../04_delivery/issue-web-v2-fase-3-ai-experience.md)
+- [WEB v2 issue fase 4](../04_delivery/issue-web-v2-fase-4-results-complete.md)
+- [WEB v2 issue fase 5](../04_delivery/issue-web-v2-fase-5-informe-exportable.md)
 - [ADR-003](ADR-003-ai-explanations-design.md) — capa IA
 - [WEB-5](../04_delivery/issue-web-5-enriquecer-ia-sin-reescanear.md) — enrich sin re-escanear

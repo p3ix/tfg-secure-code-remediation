@@ -1,37 +1,50 @@
 {% extends "base.html" %}
 {% block title %}Resultados · Secure Code Remediation{% endblock %}
 {% block content %}
-<header class="page-header">
-  <nav class="breadcrumb" aria-label="Ruta">
-    <a href="/">Inicio</a>
-    <span class="breadcrumb-sep" aria-hidden="true">/</span>
-    <a href="/analyze">Nuevo análisis</a>
-    <span class="breadcrumb-sep" aria-hidden="true">/</span>
-    <span aria-current="page">Resultados</span>
-  </nav>
-  <h1>Resultado del escaneo</h1>
-  <p>
-    Hallazgos normalizados de Bandit y Semgrep. Puedes iniciar otro análisis o, si el escaneo
-    se hizo sin IA, añadir explicaciones sin repetir las herramientas.
-  </p>
-</header>
+<div class="results-page">
+  <header class="page-header">
+    <nav class="breadcrumb" aria-label="Ruta">
+      <a href="/">Inicio</a>
+      <span class="breadcrumb-sep" aria-hidden="true">/</span>
+      <a href="/analyze">Nuevo análisis</a>
+      <span class="breadcrumb-sep" aria-hidden="true">/</span>
+      <span aria-current="page">Resultados</span>
+    </nav>
+    <h1>Resultado del escaneo</h1>
+    {% if analysis_target %}
+    <p class="results-page-target">
+      Objetivo: <code>{{ analysis_target }}</code>
+      {% if scan %}· {{ scan.summary.total_findings }} hallazgo(s) visible(s){% endif %}
+    </p>
+    {% else %}
+    <p>
+      Hallazgos normalizados de Bandit y Semgrep. Puedes iniciar otro análisis o, si el escaneo
+      se hizo sin IA, añadir explicaciones sin repetir las herramientas.
+    </p>
+    {% endif %}
+  </header>
 
-<article class="panel panel-single">
   {% if analysis_error %}
-  <div class="status error" role="alert">
-    <strong>No se pudo mostrar el resultado</strong>
-    {{ analysis_error }}
-  </div>
-  <div class="results-toolbar">
-    <a class="button button--ghost" href="/analyze">Volver a nuevo análisis</a>
-  </div>
+  <article class="panel panel-single">
+    <div class="status error" role="alert">
+      <strong>No se pudo mostrar el resultado</strong>
+      {{ analysis_error }}
+    </div>
+    <div class="results-toolbar">
+      <a class="button button--ghost" href="/analyze">Volver a nuevo análisis</a>
+    </div>
+  </article>
   {% elif scan %}
-  <div class="results-toolbar">
-    <a class="button button--ghost" href="/analyze">Nuevo análisis</a>
+  <div class="results-layout layout layout--split-scroll">
+    {% include "partials/results_sidebar.html" %}
+    {% include "partials/results_main.html" %}
   </div>
-  {% include "partials/results_panel.html" %}
+  <div class="results-mobile-bar" aria-label="Acciones rápidas">
+    <a class="button button--ghost" href="/analyze">Nuevo análisis</a>
+    <a class="button button--ghost" href="#hallazgos">Ir a hallazgos</a>
+  </div>
   {% endif %}
-</article>
+</div>
 {% endblock %}
 {% block scripts %}
 {% include "partials/form_loading_script.html" %}
