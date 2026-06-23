@@ -1,9 +1,9 @@
 {% extends "base.html" %}
 {% block title %}Nuevo análisis · Secure Code Remediation{% endblock %}
 {% block content %}
-<section class="hero" style="margin-bottom: 1rem;">
+<section class="hero hero--compact">
   <span class="eyebrow">Nuevo análisis</span>
-  <h1>Lanza un escaneo sobre tu proyecto Python.</h1>
+  <h1>Lanza un escaneo sobre tu proyecto Python</h1>
   <p class="hero-copy">
     Elige el origen del código, opcionalmente incluye explicaciones IA, y verás los resultados
     en una página dedicada. Para pruebas: <code>vulnerable_demo.zip</code>.
@@ -12,7 +12,7 @@
 
 <article class="panel panel-single">
   {% if analysis_error %}
-  <div class="status error">
+  <div class="status error" role="alert">
     <strong>No se pudo completar el análisis</strong>
     {{ analysis_error }}
   </div>
@@ -25,63 +25,78 @@
     action="/analyze"
     enctype="multipart/form-data"
   >
-    <div class="mode-grid">
-      <label class="mode-option{% if analysis_mode == 'upload_zip' %} active{% endif %}">
-        <div class="mode-head">
-          <input type="radio" name="analysis_mode" value="upload_zip" {% if analysis_mode == 'upload_zip' %}checked{% endif %} />
-          <strong>Subir ZIP</strong>
+    <section class="analyze-section" aria-labelledby="analyze-origin-title">
+      <div class="analyze-section-head">
+        <span class="step-num" aria-hidden="true">1</span>
+        <h2 id="analyze-origin-title" class="section-title">Origen del código</h2>
+      </div>
+      <div class="mode-grid" role="radiogroup" aria-label="Modo de análisis">
+        <label class="mode-option{% if analysis_mode == 'upload_zip' %} active{% endif %}" data-mode="upload_zip">
+          <div class="mode-head">
+            <input type="radio" name="analysis_mode" value="upload_zip" {% if analysis_mode == 'upload_zip' %}checked{% endif %} />
+            <strong>Subir ZIP</strong>
+          </div>
+          <small>Proyecto comprimido. Límite: {{ zip_max_bytes }} bytes.</small>
+        </label>
+
+        <label class="mode-option{% if analysis_mode == 'git_clone' %} active{% endif %}{% if not git_clone_enabled %} disabled{% endif %}" data-mode="git_clone">
+          <div class="mode-head">
+            <input type="radio" name="analysis_mode" value="git_clone" {% if analysis_mode == 'git_clone' %}checked{% endif %} {% if not git_clone_enabled %}disabled{% endif %} />
+            <strong>Clonar repositorio Git</strong>
+          </div>
+          <small>
+            {% if git_clone_enabled %}
+            HTTPS. Hosts: <code>{{ git_allowed_hosts }}</code>.
+            {% else %}
+            Desactivado (<code>TFG_ENABLE_GIT_CLONE=0</code>).
+            {% endif %}
+          </small>
+        </label>
+
+        <label class="mode-option{% if analysis_mode == 'local_path' %} active{% endif %}{% if not local_path_enabled %} disabled{% endif %}" data-mode="local_path">
+          <div class="mode-head">
+            <input type="radio" name="analysis_mode" value="local_path" {% if analysis_mode == 'local_path' %}checked{% endif %} {% if not local_path_enabled %}disabled{% endif %} />
+            <strong>Ruta local permitida</strong>
+          </div>
+          <small>
+            {% if local_path_enabled %}
+            Bajo <code>{{ local_analysis_root }}</code>.
+            {% elif not enable_local_path %}
+            Desactivado (<code>TFG_ENABLE_LOCAL_PATH=0</code>).
+            {% else %}
+            Requiere <code>TFG_LOCAL_ANALYSIS_ROOT</code>.
+            {% endif %}
+          </small>
+        </label>
+      </div>
+
+      <div class="mode-field" data-mode-field="upload_zip" {% if analysis_mode != 'upload_zip' %}hidden{% endif %}>
+        <div class="field">
+          <label for="file">Archivo ZIP</label>
+          <input id="file" type="file" name="file" accept=".zip,application/zip" />
         </div>
-        <small>Proyecto comprimido. Límite: {{ zip_max_bytes }} bytes.</small>
-      </label>
+      </div>
 
-      <label class="mode-option{% if analysis_mode == 'git_clone' %} active{% endif %}{% if not git_clone_enabled %} disabled{% endif %}">
-        <div class="mode-head">
-          <input type="radio" name="analysis_mode" value="git_clone" {% if analysis_mode == 'git_clone' %}checked{% endif %} {% if not git_clone_enabled %}disabled{% endif %} />
-          <strong>Clonar repositorio Git</strong>
+      <div class="mode-field" data-mode-field="local_path" {% if analysis_mode != 'local_path' %}hidden{% endif %}>
+        <div class="field">
+          <label for="local_path">Ruta relativa</label>
+          <input id="local_path" type="text" name="local_path" placeholder="mi-proyecto" value="{{ local_path_value|e }}" />
         </div>
-        <small>
-          {% if git_clone_enabled %}
-          HTTPS. Hosts: <code>{{ git_allowed_hosts }}</code>.
-          {% else %}
-          Desactivado (<code>TFG_ENABLE_GIT_CLONE=0</code>).
-          {% endif %}
-        </small>
-      </label>
+      </div>
 
-      <label class="mode-option{% if analysis_mode == 'local_path' %} active{% endif %}{% if not local_path_enabled %} disabled{% endif %}">
-        <div class="mode-head">
-          <input type="radio" name="analysis_mode" value="local_path" {% if analysis_mode == 'local_path' %}checked{% endif %} {% if not local_path_enabled %}disabled{% endif %} />
-          <strong>Ruta local permitida</strong>
+      <div class="mode-field" data-mode-field="git_clone" {% if analysis_mode != 'git_clone' %}hidden{% endif %}>
+        <div class="field">
+          <label for="git_url">URL Git HTTPS</label>
+          <input id="git_url" type="text" name="git_url" placeholder="https://github.com/org/repo.git" value="{{ git_url_value|e }}" />
         </div>
-        <small>
-          {% if local_path_enabled %}
-          Bajo <code>{{ local_analysis_root }}</code>.
-          {% elif not enable_local_path %}
-          Desactivado (<code>TFG_ENABLE_LOCAL_PATH=0</code>).
-          {% else %}
-          Requiere <code>TFG_LOCAL_ANALYSIS_ROOT</code>.
-          {% endif %}
-        </small>
-      </label>
-    </div>
+      </div>
+    </section>
 
-    <div class="field">
-      <label for="file">Archivo ZIP</label>
-      <input id="file" type="file" name="file" accept=".zip,application/zip" />
-    </div>
-
-    <div class="field">
-      <label for="local_path">Ruta relativa</label>
-      <input id="local_path" type="text" name="local_path" placeholder="mi-proyecto" value="{{ local_path_value|e }}" />
-    </div>
-
-    <div class="field">
-      <label for="git_url">URL Git HTTPS</label>
-      <input id="git_url" type="text" name="git_url" placeholder="https://github.com/org/repo.git" value="{{ git_url_value|e }}" />
-    </div>
-
-    <div class="field">
-      <div class="options-title">Opciones de vista</div>
+    <section class="analyze-section" aria-labelledby="analyze-options-title">
+      <div class="analyze-section-head">
+        <span class="step-num" aria-hidden="true">2</span>
+        <h2 id="analyze-options-title" class="section-title">Opciones de vista</h2>
+      </div>
       <div class="option-list">
         <label class="toggle">
           <input type="checkbox" name="hide_info" value="true" {% if hide_info %}checked{% endif %} />
@@ -110,18 +125,23 @@
         </p>
         {% endif %}
       </div>
-    </div>
+    </section>
 
-    <p class="form-status" id="analyze-form-status" role="status" aria-live="polite" hidden></p>
-
-    <button
-      class="button"
-      type="submit"
-      id="analyze-submit"
-      data-loading-label="Analizando…"
-    >
-      Lanzar análisis
-    </button>
+    <section class="analyze-section" aria-labelledby="analyze-submit-title">
+      <div class="analyze-section-head">
+        <span class="step-num" aria-hidden="true">3</span>
+        <h2 id="analyze-submit-title" class="section-title">Ejecutar</h2>
+      </div>
+      <p class="form-status" id="analyze-form-status" role="status" aria-live="polite" hidden></p>
+      <button
+        class="button"
+        type="submit"
+        id="analyze-submit"
+        data-loading-label="Analizando…"
+      >
+        Lanzar análisis
+      </button>
+    </section>
   </form>
 </article>
 {% endblock %}

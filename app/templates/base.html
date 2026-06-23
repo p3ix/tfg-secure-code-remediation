@@ -3,19 +3,27 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Análisis de seguridad Python con Bandit y Semgrep. Explicaciones IA opcionales para revisión de hallazgos." />
   <title>{% block title %}Secure Code Remediation{% endblock %}</title>
   <link rel="stylesheet" href="/static/web.css" />
 </head>
 <body>
+  <a class="skip-link" href="#main-content">Saltar al contenido</a>
   <div class="page">
-    <nav class="site-nav">
+    <nav class="site-nav" aria-label="Principal">
       <a class="brand" href="/">Secure Code Remediation</a>
       <div class="links">
-        <a href="/" {% if nav_active == 'home' %}class="is-active"{% endif %}>Inicio</a>
-        <a href="/analyze" {% if nav_active == 'analyze' %}class="is-active"{% endif %}>Nuevo análisis</a>
+        <a href="/" {% if nav_active == 'home' %}class="is-active" aria-current="page"{% endif %}>Inicio</a>
+        <a href="/analyze" {% if nav_active == 'analyze' %}class="is-active" aria-current="page"{% endif %}>Nuevo análisis</a>
       </div>
     </nav>
-    {% block content %}{% endblock %}
+    <main id="main-content">
+      {% block content %}{% endblock %}
+    </main>
+    <footer class="site-footer">
+      <span>TFG · Análisis SAST Python (Bandit + Semgrep)</span>
+      <span><a href="/docs">API</a> · <a href="/health">Estado</a></span>
+    </footer>
   </div>
   {% block scripts %}{% endblock %}
 </body>

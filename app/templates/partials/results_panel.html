@@ -1,9 +1,8 @@
         <div class="results-head">
           <div>
-            <h2 class="section-title">Resultado del escaneo</h2>
+            <h2 class="section-title">Resumen</h2>
             <p>
-              Hallazgos normalizados (Bandit + Semgrep). Puedes iniciar otro análisis desde
-              <a href="/analyze">Nuevo análisis</a>.
+              Objetivo analizado y totales por severidad. Detalle de hallazgos más abajo.
             </p>
           </div>
           <div class="pill-row">
@@ -56,7 +55,7 @@
           {% for sev, n in scan.summary.by_severity.items() %}
           <article class="stat-card">
             <h3>Severidad {{ sev }}</h3>
-            <div class="num">{{ n }}</div>
+            <div class="num sev-{{ sev }}">{{ n }}</div>
           </article>
           {% endfor %}
         </div>
