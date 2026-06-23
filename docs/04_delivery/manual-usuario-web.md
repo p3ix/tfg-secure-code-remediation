@@ -1,106 +1,112 @@
-# Manual de usuario: consola web del análisis (`/dashboard`)
+# Manual de usuario: interfaz web v2
 
-Este documento recoge, desde el punto de vista de quien usa la aplicación en el navegador, cómo lanzar análisis de código Python con Bandit y Semgrep y cómo interpretar la salida. Lo he redactado en paralelo al desarrollo de la consola web del TFG para poder citarlo en la memoria como material de entrega y de apoyo a demostraciones.
+Este documento describe, desde el punto de vista de quien usa la aplicación en el navegador, cómo lanzar análisis de código Python con Bandit y Semgrep y cómo interpretar la salida. Lo he redactado en paralelo al rediseño web v2 del TFG para la defensa y el despliegue en VPS.
 
-## 1. Qué es el dashboard
+## 1. Pantallas principales
 
-El **dashboard** es una página HTML servida por la propia API (FastAPI + Jinja2). Permite:
+La interfaz pública se organiza en tres rutas:
 
-- ejecutar análisis **reales** sobre proyectos aportados como ZIP, clon Git HTTPS o ruta local permitida en el servidor;
-- usar modos **MVP/demo** basados en el corpus interno `fixtures/mvp` para validación rápida;
-- ver el resultado en formato **presentable**: hallazgos normalizados, sin volcado crudo de herramienta, pensado para revisión y para material de memoria.
+| Ruta | Rol |
+|------|-----|
+| **`/`** | Inicio: qué hace la app, flujo en tres pasos y enlace a nuevo análisis |
+| **`/analyze`** | Formulario para lanzar un escaneo (solo modos reales) |
+| **`/results/{analysis_id}`** | Resultados del análisis en una página dedicada |
 
-**URL habitual:** `http://127.0.0.1:8000/dashboard` (si la API corre en el puerto por defecto).
+**URL habitual en local:** `http://127.0.0.1:8000/`
 
-La raíz `http://127.0.0.1:8000/` redirige a `/dashboard`.
+La ruta antigua `/dashboard` redirige a `/analyze`. Los modos demo basados en fixtures del corpus MVP siguen disponibles para desarrollo en `/dashboard-legacy`, pero no forman parte de la experiencia pública de defensa.
 
 ## 2. Requisitos
 
 - Un navegador actual.
 - El backend en ejecución (por ejemplo `uvicorn app.main:app`).
-- En el **servidor** donde corre el análisis: herramientas `bandit` y `semgrep` disponibles para el proceso (el backend las invoca por subproceso). La primera ejecución de Semgrep puede requerir **descarga de reglas** según el entorno.
+- En el **servidor** donde corre el análisis: herramientas `bandit` y `semgrep` disponibles para el proceso. La primera ejecución de Semgrep puede requerir **descarga de reglas** según el entorno.
 
-## 3. Estructura de la pantalla
+### Activar explicaciones IA
 
-### 3.1 Panel «Nuevo análisis»
+Por defecto la IA está desactivada. Para ver el toggle en el formulario o el botón de enriquecimiento en resultados:
 
-Formulario **POST** a `/dashboard/analyze` con **multipart/form-data** (necesario para subir ficheros ZIP).
+```bash
+TFG_AI_EXPLANATIONS_ENABLED=1 TFG_AI_PROVIDER=stub uvicorn app.main:app --host 127.0.0.1 --port 8000
+```
 
-- **Modo de análisis** (radio): determina qué origen de código se usa.
-- **Archivo ZIP:** solo aplica al modo «Subir ZIP».
-- **Ruta relativa:** solo aplica al modo «Ruta local permitida».
-- **URL Git HTTPS:** solo aplica al modo «Clonar repositorio Git».
-- **Vista presentable:**
-  - **Vista demo** (`hide_info`): reduce el listado ocultando parte de hallazgos informativos o de menor severidad (comportamiento descrito en la propia interfaz).
-  - **Agrupar equivalentes** (`group_equivalent`): fusiona hallazgos que coinciden en fichero, línea y categoría MVP, mostrando varias fuentes en una misma fila cuando aplica.
+En producción (VPS) se configura en `.env`. Con `stub` no hace falta Ollama; con `ollama` se usa un modelo local.
 
-### 3.2 Panel de resultados
+## 3. Flujo recomendado para la defensa
+
+1. Abrir **`/`** y pulsar **Nuevo análisis**.
+2. En **`/analyze`**, elegir **Subir ZIP** y seleccionar `vulnerable_demo.zip` (incluido en la raíz del repositorio para pruebas).
+3. Opcional: marcar **Incluir explicaciones IA** o dejarlo sin marcar y añadirlas después en resultados.
+4. Pulsar **Lanzar análisis**. Tras unos segundos se redirige a **`/results/{analysis_id}`**.
+5. Revisar resumen, diagnóstico Bandit/Semgrep y listado de hallazgos. Si el análisis fue sin IA, usar **Añadir explicaciones IA a este resultado**.
+
+## 4. Formulario de análisis (`/analyze`)
+
+Formulario **POST** a `/analyze` con **multipart/form-data** (necesario para subir ficheros ZIP).
+
+### 4.1 Origen del código
+
+- **Subir ZIP:** proyecto comprimido. Solo se muestra el campo de fichero cuando este modo está seleccionado.
+- **Clonar repositorio Git:** URL HTTPS; hosts permitidos según `TFG_GIT_ALLOWED_HOSTS`.
+- **Ruta local permitida:** subdirectorio relativo bajo `TFG_LOCAL_ANALYSIS_ROOT` en el servidor.
+
+### 4.2 Opciones de vista
+
+- **Ocultar informativos / baja severidad:** reduce ruido en el listado.
+- **Agrupar equivalentes:** fusiona hallazgos con mismo fichero, línea y categoría MVP.
+- **Incluir explicaciones IA** (si está habilitada en el servidor): genera explicaciones durante el escaneo.
+
+Al enviar el formulario, el botón muestra estado de carga (`Analizando…`) y un mensaje de progreso accesible.
+
+## 5. Página de resultados (`/results/{analysis_id}`)
 
 Tras un análisis correcto se muestra:
 
-- **Objetivo** (`analysis_target`): qué se ha analizado (por ejemplo etiqueta del ZIP, prefijo `git:https://…`, `local:subruta/...`).
-- **Modo de ejecución:** p. ej. `runtime` cuando el escaneo se ha ejecutado contra código extraído o clonado.
-- **Analysis ID:** identificador único de la ejecución (útil para correlacionar con logs del servidor).
+- **Objetivo** (`analysis_target`): qué se ha analizado.
+- **Modo de ejecución:** p. ej. `runtime`.
+- **Analysis ID:** identificador único (útil para logs y API).
 - **Resúmenes:** totales por severidad, categoría MVP y modo de remediación.
-- **Tabla de hallazgos:** cada fila incluye severidad, fichero, líneas, herramienta/regla y texto de mensaje acotado.
+- **Diagnóstico Bandit / Semgrep:** estado de cada herramienta.
+- **Tabla de hallazgos:** severidad, fichero, líneas, herramienta/regla, mensaje y, si aplica, bloque de explicación IA.
 
-Si el análisis termina sin filas visibles con los filtros activos, la interfaz indica explícitamente un estado vacío.
+Los resultados se guardan en memoria del proceso (~60 minutos). Si el identificador expiró o el servidor se reinició, la página muestra un error claro con código `[SCAN_RESULT_EXPIRED]`.
 
-### 3.3 Mensajes de error
+### Enriquecimiento IA posterior (WEB-5)
 
-Si algo falla, aparece un bloque de error con el formato:
+Si el análisis se lanzó **sin** IA, aparece un panel para **añadir explicaciones** sin volver a ejecutar Bandit ni Semgrep.
+
+## 6. Mensajes de error
+
+Si algo falla, aparece un bloque con el formato:
 
 `[CÓDIGO_DE_ERROR] mensaje explicativo (analysis_id=…)`
 
-El **código** coincide con el contrato de errores de la API para los mismos flujos, de modo que la documentación técnica y la experiencia web están alineadas.
+El código coincide con el contrato de errores de la API.
 
-## 4. Modos de análisis (orden recomendado en la interfaz)
-
-| Modo | Tipo | Qué hace |
-|------|------|----------|
-| **Subir ZIP (real)** | Producción | Sube un `.zip` con el proyecto. El servidor valida tipo/firma, tamaño y extracción segura y ejecuta Bandit + Semgrep. |
-| **Clonar repositorio Git (real)** | Producción | Clonado superficial (`--depth 1`) desde **HTTPS**; solo hosts permitidos por configuración. |
-| **Ruta local permitida (real)** | Producción | Analiza un **subdirectorio relativo** bajo una raíz fijada en el servidor. No se aceptan rutas absolutas ni `..`. |
-| **Informes guardados (MVP/demo)** | Demo | Carga informes ya generados del corpus MVP (sin ejecutar herramientas sobre tu ZIP). |
-| **Ejecutar fixtures (MVP/demo)** | Demo | Ejecuta Bandit y Semgrep sobre el directorio interno `fixtures/mvp` (útil para comprobar que el entorno funciona). |
-
-Los modos «real» están pensados para trabajo con proyectos ajenos; los «MVP/demo» priorizan repetibilidad y demostración académica.
-
-## 5. Buenas prácticas rápidas
-
-- **ZIP:** usar archivo `.zip` estándar; el límite en bytes se muestra en la tarjeta del modo (proviene de `TFG_ZIP_MAX_BYTES`).
-- **Git:** usar URL pública `https://host/organización/repositorio(.git)` sin credenciales en la URL, sin query ni fragmento; el host debe estar entre los permitidos (por defecto se muestran en la tarjeta).
-- **Ruta local:** escribir solo la parte relativa, p. ej. `mi-proyecto` o `grupo/proyecto`, nunca rutas absolutas. Si el modo aparece deshabilitado, es porque falta configurar la raíz en el servidor o porque el administrador ha desactivado el análisis local.
-- **Seguridad:** estos análisis ejecutan herramientas y procesan código no confiable; el despliegue debe aislarse y acotarse según la política del entorno (véase documentación de hardening en `docs/04_delivery/`).
-
-## 6. Configuración que afecta a lo que ves en pantalla
-
-El comportamiento visible depende de variables de entorno `TFG_*` en el servidor. No hace falta conocerlas todas para usar el dashboard; las decisivas son:
+## 7. Configuración visible en pantalla
 
 | Variable | Efecto en la interfaz |
 |----------|------------------------|
-| `TFG_ZIP_MAX_BYTES` | Tamaño máximo del ZIP subido. Aparece como «Límite actual» en el modo ZIP. |
-| `TFG_ENABLE_GIT_CLONE` | Si está desactivada, el modo Git queda deshabilitado y se explica en la tarjeta. |
-| `TFG_GIT_ALLOWED_HOSTS` | Hosts HTTPS permitidos para clonar; se listan en la tarjeta del modo Git. |
-| `TFG_LOCAL_ANALYSIS_ROOT` | Directorio base del servidor para el modo ruta local. |
-| `TFG_ENABLE_LOCAL_PATH` | Si está desactivada, el modo ruta local queda deshabilitado aunque exista raíz. |
+| `TFG_ZIP_MAX_BYTES` | Tamaño máximo del ZIP (modo Subir ZIP). |
+| `TFG_ENABLE_GIT_CLONE` | Habilita o deshabilita clon Git. |
+| `TFG_GIT_ALLOWED_HOSTS` | Hosts listados en la tarjeta Git. |
+| `TFG_LOCAL_ANALYSIS_ROOT` | Raíz para ruta local. |
+| `TFG_ENABLE_LOCAL_PATH` | Kill-switch del modo ruta local. |
+| `TFG_AI_EXPLANATIONS_ENABLED` | Muestra opciones y botón de IA. |
 
-Existen límites adicionales (entradas máximas del ZIP, árbol demasiado grande, tiempo por herramienta, etc.) descritos en la documentación de entrega de robustez y seguridad operativa.
+Consulta rápida: `GET /ai/status` devuelve flags y límites en JSON.
 
-**Consulta rápida para operadores:** `GET /ai/status` devuelve un resumen JSON de flags y límites actuales (incluye campos como `zip_max_bytes`, `zip_max_entries`, `local_path_enabled`, `enable_local_path`, entre otros).
+## 8. API y documentación técnica
 
-## 7. Dónde ir si necesitas la API cruda
+- **OpenAPI:** `http://127.0.0.1:8000/docs`
+- Endpoints equivalentes: `POST /analysis/upload-zip`, `POST /analysis/git-clone`, `POST /analysis/local-path`, presentable y enrich.
 
-- **Documentación interactiva OpenAPI:** `http://127.0.0.1:8000/docs`
-- Endpoints de análisis equivalentes a los modos web: `POST /analysis/upload-zip`, `POST /analysis/git-clone`, `POST /analysis/local-path`.
+## 9. Limitaciones conocidas
 
-El manual de interfaz se centra en `/dashboard`; la integración vía HTTP queda documentada en el propio OpenAPI y en los entregables de contrato de errores (`docs/04_delivery/api-dashboard-error-contract.md`).
-
-## 8. Limitaciones conocidas (alcance TFG)
-
-- La capa de **explicación asistida por IA** es opcional y puede figurar desactivada; el núcleo de detección no depende de ella (ver ADR-002 en el repositorio).
-- Los parches automáticos y la verificación asociada cubren **patrones MVP** concretos; el dashboard prioriza **visibilidad del escaneo** sobre un IDE completo.
+- La capa de explicación IA es opcional; el núcleo SAST no depende de ella.
+- Los parches automáticos cubren patrones MVP concretos; la web prioriza visibilidad del escaneo.
+- El informe exportable imprimible está previsto en una fase posterior (`/results/{id}/report`).
 
 ---
 
-*Documento generado como material de entrega del TFG y guía de usuario de la consola web; convive con la documentación técnica del proyecto en `docs/`.*
+*Material de entrega del TFG. Rutas y capturas alineadas con ADR-004 (web v2).*

@@ -3,19 +3,48 @@
 {% block content %}
 <section class="hero">
   <span class="eyebrow">Análisis de seguridad Python</span>
-  <h1>Detecta vulnerabilidades con Bandit y Semgrep, con explicaciones IA opcionales.</h1>
+  <h1>
+    Detecta vulnerabilidades con
+    <span class="hero-title-accent">Bandit y Semgrep</span>,
+    con explicaciones IA opcionales.
+  </h1>
   <p class="hero-copy">
     Sube un proyecto comprimido, clona un repositorio Git HTTPS o analiza una ruta local
     permitida en el servidor. Los resultados se muestran en una página dedicada, lista para
     revisión o defensa del TFG.
   </p>
-  <div class="cta-row">
-    <a class="button" href="/analyze" style="display:inline-block;text-align:center;text-decoration:none;">Nuevo análisis</a>
+  <div class="hero-meta">
+    <span>Bandit + Semgrep</span>
+    <span>IA opcional (stub / Ollama)</span>
+    <span>ZIP de prueba: <code>vulnerable_demo.zip</code></span>
   </div>
+  <div class="cta-row">
+    <a class="button" href="/analyze">Nuevo análisis</a>
+    <a class="button button--ghost" href="/analyze">Subir ZIP de demo</a>
+  </div>
+
+  <ol class="steps-flow" aria-label="Cómo funciona">
+    <li class="step-card">
+      <span class="step-num" aria-hidden="true">1</span>
+      <h3>Elige el origen</h3>
+      <p>ZIP, repositorio Git HTTPS o ruta local bajo la raíz configurada en el servidor.</p>
+    </li>
+    <li class="step-card">
+      <span class="step-num" aria-hidden="true">2</span>
+      <h3>Lanza el escaneo</h3>
+      <p>Bandit y Semgrep analizan el código. Puedes activar explicaciones IA o añadirlas después.</p>
+    </li>
+    <li class="step-card">
+      <span class="step-num" aria-hidden="true">3</span>
+      <h3>Revisa resultados</h3>
+      <p>Hallazgos normalizados, diagnóstico de herramientas y metadatos en una URL compartible.</p>
+    </li>
+  </ol>
+
   <div class="feature-grid">
     <article class="feature-card">
       <h3>Subir ZIP</h3>
-      <p>Proyecto Python comprimido. Para pruebas locales puedes usar <code>vulnerable_demo.zip</code> en la raíz del repo.</p>
+      <p>Proyecto Python comprimido. Para pruebas locales usa <code>vulnerable_demo.zip</code> en la raíz del repo.</p>
     </article>
     <article class="feature-card">
       <h3>Clonar Git</h3>
@@ -27,7 +56,7 @@
     </article>
     <article class="feature-card">
       <h3>IA opcional</h3>
-      <p>Activa explicaciones al analizar o añádelas después sin repetir el escaneo (requiere <code>TFG_AI_EXPLANATIONS_ENABLED=1</code>).</p>
+      <p>Activa explicaciones al analizar o añádelas después sin repetir el escaneo (<code>TFG_AI_EXPLANATIONS_ENABLED=1</code>).</p>
     </article>
   </div>
 </section>

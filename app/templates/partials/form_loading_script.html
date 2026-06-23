@@ -30,6 +30,24 @@
       });
     }
 
+    function syncAnalyzeModeFields() {
+      const form = document.getElementById("dashboard-analyze-form");
+      if (!form) return;
+
+      const selected = form.querySelector('input[name="analysis_mode"]:checked');
+      const mode = selected ? selected.value : "upload_zip";
+
+      form.querySelectorAll(".mode-option").forEach(function (option) {
+        const input = option.querySelector('input[type="radio"]');
+        option.classList.toggle("active", input && input.checked);
+      });
+
+      form.querySelectorAll("[data-mode-field]").forEach(function (block) {
+        const show = block.getAttribute("data-mode-field") === mode;
+        block.hidden = !show;
+      });
+    }
+
     const analyzeForm = document.getElementById("dashboard-analyze-form");
     const analyzeSubmit = document.getElementById("analyze-submit");
     const analyzeStatus = document.getElementById("analyze-form-status");
@@ -39,6 +57,13 @@
     function syncAiHint() {
       if (!aiHint || !aiCheckbox) return;
       aiHint.hidden = !aiCheckbox.checked;
+    }
+
+    if (analyzeForm) {
+      analyzeForm.querySelectorAll('input[name="analysis_mode"]').forEach(function (radio) {
+        radio.addEventListener("change", syncAnalyzeModeFields);
+      });
+      syncAnalyzeModeFields();
     }
 
     if (aiCheckbox) {

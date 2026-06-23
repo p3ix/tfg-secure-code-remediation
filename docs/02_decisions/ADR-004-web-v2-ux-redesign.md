@@ -2,7 +2,7 @@
 
 ## Estado
 
-Aceptada (fase 0–1 en curso). Sustituye la consola monolítica `/dashboard` como experiencia principal.
+Aceptada (fases 0–2). Sustituye la consola monolítica `/dashboard` como experiencia principal.
 
 ## Contexto
 
@@ -45,18 +45,26 @@ TTL en memoria ~60 min (sin disco). Tras reinicio del proceso o caducidad, `/res
 
 ### Fuera de alcance (fases posteriores)
 
-- Rediseño visual completo (fase 2).
 - Informe PDF/HTML imprimible (fase 5).
 - Despliegue VPS documentado (fase 6).
+
+### Fase 2 (cerrada)
+
+- Tipografía sans para lectura y mono para código/metadatos.
+- Landing con flujo «Cómo funciona» en tres pasos.
+- Formulario `/analyze` con secciones numeradas y campos visibles según modo.
+- Resultados con breadcrumb, toolbar y estados de error accesibles.
+- Manual de usuario actualizado (`manual-usuario-web.md`).
 
 ## Consecuencias
 
 - Tests de humo actualizados hacia rutas v2.
-- `manual-usuario-web.md` quedará desactualizado hasta fase 2 (se actualizará con capturas nuevas).
+- `manual-usuario-web.md` actualizado en fase 2 (rutas v2).
 - La demo de defensa usará `vulnerable_demo.zip` subido por el formulario `/analyze`.
 
 ## Referencias
 
 - [WEB v2 issue fase 0–1](../04_delivery/issue-web-v2-fase-0-1-rutas.md)
+- [WEB v2 issue fase 2](../04_delivery/issue-web-v2-fase-2-visual.md)
 - [ADR-003](ADR-003-ai-explanations-design.md) — capa IA
 - [WEB-5](../04_delivery/issue-web-5-enriquecer-ia-sin-reescanear.md) — enrich sin re-escanear
