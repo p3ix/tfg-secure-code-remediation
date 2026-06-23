@@ -1,0 +1,11 @@
+{% if scan %}
+<div class="ai-status-banner ai-status-banner--{{ ai_status_kind }}" role="status">
+  <div class="ai-status-banner__head">
+    <span class="ai-tag">{{ ai_status_label }}</span>
+    {% if ai_explanations_available %}
+    <span class="ai-meta">Proveedor: <code>{{ ai_provider_label }}</code></span>
+    {% endif %}
+  </div>
+  <p>{{ ai_status_message }}</p>
+</div>
+{% endif %}

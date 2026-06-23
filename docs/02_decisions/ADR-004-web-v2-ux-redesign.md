@@ -43,6 +43,13 @@ El núcleo backend (SAST, presentable, IA, almacén efímero) se reutiliza.
 
 TTL en memoria ~60 min (sin disco). Tras reinicio del proceso o caducidad, `/results/{id}` muestra error claro.
 
+### Fase 3 (cerrada)
+
+- Sección «Explicaciones IA» explícita en `/analyze` (toggle o aviso si capa desactivada).
+- Filtros de vista en `/results/{id}` vía `POST /results/{id}/view-prefs` sin re-SAST.
+- Banner de estado IA y mensajes según proveedor (stub/Ollama).
+- Enrich WEB-5 integrado con preferencias de vista persistidas.
+
 ### Fuera de alcance (fases posteriores)
 
 - Informe PDF/HTML imprimible (fase 5).
@@ -66,5 +73,6 @@ TTL en memoria ~60 min (sin disco). Tras reinicio del proceso o caducidad, `/res
 
 - [WEB v2 issue fase 0–1](../04_delivery/issue-web-v2-fase-0-1-rutas.md)
 - [WEB v2 issue fase 2](../04_delivery/issue-web-v2-fase-2-visual.md)
+- [WEB v2 issue fase 3](../04_delivery/issue-web-v2-fase-3-ai-experience.md)
 - [ADR-003](ADR-003-ai-explanations-design.md) — capa IA
 - [WEB-5](../04_delivery/issue-web-5-enriquecer-ia-sin-reescanear.md) — enrich sin re-escanear

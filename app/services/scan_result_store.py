@@ -69,6 +69,27 @@ class ScanResultStore:
         self._entries[analysis_id] = updated
         return updated
 
+    def update_view_prefs(
+        self,
+        analysis_id: str,
+        *,
+        hide_info: bool | None = None,
+        group_equivalent: bool | None = None,
+    ) -> StoredScanResult | None:
+        entry = self.get(analysis_id)
+        if entry is None:
+            return None
+        updates: dict[str, bool] = {}
+        if hide_info is not None:
+            updates["hide_info"] = hide_info
+        if group_equivalent is not None:
+            updates["group_equivalent"] = group_equivalent
+        if not updates:
+            return entry
+        updated = replace(entry, **updates)
+        self._entries[analysis_id] = updated
+        return updated
+
     def clear(self) -> None:
         self._entries.clear()
 

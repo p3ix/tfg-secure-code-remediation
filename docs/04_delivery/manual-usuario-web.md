@@ -50,17 +50,22 @@ Formulario **POST** a `/analyze` con **multipart/form-data** (necesario para sub
 - **Clonar repositorio Git:** URL HTTPS; hosts permitidos según `TFG_GIT_ALLOWED_HOSTS`.
 - **Ruta local permitida:** subdirectorio relativo bajo `TFG_LOCAL_ANALYSIS_ROOT` en el servidor.
 
-### 4.2 Opciones de vista
+### 4.2 Explicaciones IA
 
-- **Ocultar informativos / baja severidad:** reduce ruido en el listado.
-- **Agrupar equivalentes:** fusiona hallazgos con mismo fichero, línea y categoría MVP.
-- **Incluir explicaciones IA** (si está habilitada en el servidor): genera explicaciones durante el escaneo.
+Sección dedicada en el formulario:
 
-Al enviar el formulario, el botón muestra estado de carga (`Analizando…`) y un mensaje de progreso accesible.
+- Si `TFG_AI_EXPLANATIONS_ENABLED=1`, aparece el toggle **Incluir explicaciones IA en este escaneo** con texto según el proveedor (`stub` u `ollama`).
+- Si la capa está desactivada, se muestra un aviso claro; el SAST funciona igual sin IA.
+- Sin marcar el toggle, el análisis es más rápido y puedes usar **Añadir explicaciones IA** en la página de resultados (WEB-5).
+
+Al enviar el formulario, el botón muestra estado de carga (`Analizando…`) y un mensaje de progreso accesible; si IA está marcada, el mensaje indica que puede tardar más (especialmente con Ollama).
 
 ## 5. Página de resultados (`/results/{analysis_id}`)
 
 Tras un análisis correcto se muestra:
+
+- **Banner de estado IA:** indica si el escaneo incluyó IA, si está pendiente de enrich o si la capa está desactivada en el servidor.
+- **Filtros de vista:** formulario para ocultar baja severidad o agrupar equivalentes **sin re-ejecutar** Bandit/Semgrep.
 
 - **Objetivo** (`analysis_target`): qué se ha analizado.
 - **Modo de ejecución:** p. ej. `runtime`.
