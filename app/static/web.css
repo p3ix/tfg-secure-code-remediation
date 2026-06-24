@@ -780,6 +780,12 @@
       .side-panel {
         position: static;
       }
+      .hero {
+        padding: 1.6rem 1.3rem;
+      }
+      .panel-single {
+        padding: 1.2rem;
+      }
       .hero h1 {
         font-size: clamp(1.9rem, 8vw, 3rem);
         line-height: 1.06;
@@ -1151,8 +1157,8 @@
     @media (min-width: 901px) {
       .results-layout .side-panel {
         position: sticky;
-        top: 1rem;
-        max-height: calc(100dvh - 2rem);
+        top: 4.75rem;
+        max-height: calc(100dvh - 5.75rem);
         overflow-y: auto;
         overscroll-behavior: contain;
       }
