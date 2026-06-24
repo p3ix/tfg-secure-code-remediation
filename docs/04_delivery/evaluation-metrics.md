@@ -2,7 +2,7 @@
 
 Generado automáticamente por `python -m app.services.evaluation` sobre el corpus etiquetado en `fixtures/eval/ground_truth.json`. Las métricas se calculan con funciones deterministas cubiertas por `tests/test_evaluation_metrics.py`.
 
-_Fecha: 2026-06-24T20:33:55Z_
+_Fecha: 2026-06-24T21:11:57Z_
 
 ## Resumen
 
