@@ -6,6 +6,28 @@ import os
 from functools import lru_cache
 from pathlib import Path
 
+from dotenv import load_dotenv
+
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+
+
+def load_project_dotenv(*, repo_root: Path | None = None) -> bool:
+    """
+    Carga `.env` del repositorio si existe.
+
+    No sobrescribe variables ya definidas en el entorno del proceso (p. ej. systemd
+    o `export` previo en la shell), de modo que el despliegue explícito sigue
+    teniendo prioridad.
+    """
+    env_path = (repo_root or _REPO_ROOT) / ".env"
+    if not env_path.is_file():
+        return False
+    load_dotenv(env_path, override=False)
+    return True
+
+
+load_project_dotenv()
+
 # Bandit `-x` acepta lista separada por comas (globs). Semgrep usa la misma
 # lista para generar varios `--exclude` (ver `build_semgrep_command`).
 _DEFAULT_ANALYSIS_EXCLUDE_DIRS = (

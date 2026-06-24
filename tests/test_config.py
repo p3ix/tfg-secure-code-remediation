@@ -1,3 +1,6 @@
+import os
+from pathlib import Path
+
 import pytest
 
 from app.config import Settings, get_settings
@@ -96,3 +99,33 @@ def test_settings_ai_provider_normalized(monkeypatch: pytest.MonkeyPatch) -> Non
         assert Settings().ai_provider == "stub"
     finally:
         get_settings.cache_clear()
+
+
+def test_load_project_dotenv_reads_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.config import load_project_dotenv
+
+    monkeypatch.delenv("TFG_AI_EXPLANATIONS_ENABLED", raising=False)
+    env_file = tmp_path / ".env"
+    env_file.write_text("TFG_AI_EXPLANATIONS_ENABLED=1\n", encoding="utf-8")
+
+    assert load_project_dotenv(repo_root=tmp_path) is True
+    assert os.environ.get("TFG_AI_EXPLANATIONS_ENABLED") == "1"
+
+
+def test_load_project_dotenv_does_not_override_existing_env(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from app.config import load_project_dotenv
+
+    monkeypatch.setenv("TFG_AI_EXPLANATIONS_ENABLED", "0")
+    env_file = tmp_path / ".env"
+    env_file.write_text("TFG_AI_EXPLANATIONS_ENABLED=1\n", encoding="utf-8")
+
+    load_project_dotenv(repo_root=tmp_path)
+    assert os.environ.get("TFG_AI_EXPLANATIONS_ENABLED") == "0"
+
+
+def test_load_project_dotenv_missing_file(tmp_path: Path) -> None:
+    from app.config import load_project_dotenv
+
+    assert load_project_dotenv(repo_root=tmp_path) is False

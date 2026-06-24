@@ -30,7 +30,7 @@ Por defecto la IA está desactivada. Para ver el toggle en el formulario o el bo
 TFG_AI_EXPLANATIONS_ENABLED=1 TFG_AI_PROVIDER=stub uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
-En producción (VPS) se configura en `.env`. Con `stub` no hace falta Ollama; con `ollama` se usa un modelo local.
+En producción (VPS) se configura en `.env` en la raíz del proyecto; el backend lo carga al arrancar. Con `stub` no hace falta Ollama; con `ollama` se usa un modelo local.
 
 ## 3. Flujo recomendado para la defensa
 
