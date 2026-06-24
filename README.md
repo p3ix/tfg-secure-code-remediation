@@ -51,6 +51,8 @@ export PATH="$PWD/.venv/bin:$PATH"
 uvicorn app.main:app --reload
 ```
 
+Opcional: copia `.env.example` a `.env` en la raíz del repo (IA, límites ZIP, etc.). El backend **carga `.env` al arrancar**; las variables ya exportadas en la shell o en systemd tienen prioridad.
+
 - Salud: `GET http://127.0.0.1:8000/health`
 - Inicio: `GET http://127.0.0.1:8000/` (redirección 302 a `/dashboard`)
 - Dashboard: `GET http://127.0.0.1:8000/dashboard`
