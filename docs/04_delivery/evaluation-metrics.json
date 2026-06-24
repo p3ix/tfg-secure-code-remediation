@@ -1,0 +1,230 @@
+{
+  "summary": {
+    "vulnerable_cases": 8,
+    "clean_cases": 6,
+    "recall": 0.875,
+    "specificity": 1.0,
+    "false_positives": 0,
+    "cwe_coverage": 1.0,
+    "remediation_coverage": 1.0
+  },
+  "detection": {
+    "total_cases": 8,
+    "detected": 7,
+    "recall": 0.875,
+    "by_category": {
+      "command_injection": {
+        "total": 2,
+        "detected": 2,
+        "recall": 1.0
+      },
+      "flask_debug_true": {
+        "total": 1,
+        "detected": 1,
+        "recall": 1.0
+      },
+      "missing_timeout": {
+        "total": 2,
+        "detected": 1,
+        "recall": 0.5
+      },
+      "sql_injection": {
+        "total": 1,
+        "detected": 1,
+        "recall": 1.0
+      },
+      "unsafe_yaml_load": {
+        "total": 1,
+        "detected": 1,
+        "recall": 1.0
+      },
+      "verify_false": {
+        "total": 1,
+        "detected": 1,
+        "recall": 1.0
+      }
+    },
+    "per_case": [
+      {
+        "path": "fixtures/mvp/command_injection/vuln_os_system.py",
+        "category": "command_injection",
+        "cwe_id": 78,
+        "detected": true,
+        "tools": [
+          "bandit"
+        ]
+      },
+      {
+        "path": "fixtures/mvp/command_injection/vuln_shell_true.py",
+        "category": "command_injection",
+        "cwe_id": 78,
+        "detected": true,
+        "tools": [
+          "bandit",
+          "semgrep"
+        ]
+      },
+      {
+        "path": "fixtures/mvp/unsafe_yaml_load/vuln_yaml_load.py",
+        "category": "unsafe_yaml_load",
+        "cwe_id": 502,
+        "detected": true,
+        "tools": [
+          "bandit",
+          "semgrep"
+        ]
+      },
+      {
+        "path": "fixtures/mvp/https_verify_false/vuln_requests_verify_false.py",
+        "category": "verify_false",
+        "cwe_id": 295,
+        "detected": true,
+        "tools": [
+          "bandit",
+          "semgrep"
+        ]
+      },
+      {
+        "path": "fixtures/mvp/missing_timeout/vuln_requests_no_timeout.py",
+        "category": "missing_timeout",
+        "cwe_id": 400,
+        "detected": true,
+        "tools": [
+          "bandit"
+        ]
+      },
+      {
+        "path": "fixtures/mvp/missing_timeout/vuln_httpx_no_timeout.py",
+        "category": "missing_timeout",
+        "cwe_id": 400,
+        "detected": false,
+        "tools": []
+      },
+      {
+        "path": "fixtures/mvp/flask_debug_true/vuln_flask_debug_true.py",
+        "category": "flask_debug_true",
+        "cwe_id": 489,
+        "detected": true,
+        "tools": [
+          "bandit",
+          "semgrep"
+        ]
+      },
+      {
+        "path": "fixtures/mvp/sql_injection/vuln_sql_injection.py",
+        "category": "sql_injection",
+        "cwe_id": 89,
+        "detected": true,
+        "tools": [
+          "bandit",
+          "semgrep"
+        ]
+      }
+    ]
+  },
+  "tool_coverage": {
+    "bandit_only": 2,
+    "semgrep_only": 0,
+    "both": 5,
+    "none": 1
+  },
+  "classification": {
+    "total_findings": 15,
+    "with_cwe": 15,
+    "with_owasp": 13,
+    "cwe_coverage": 1.0,
+    "owasp_coverage": 0.8667
+  },
+  "false_positives": {
+    "total_cases": 6,
+    "false_positives": 0,
+    "specificity": 1.0,
+    "per_case": [
+      {
+        "path": "fixtures/eval/clean/safe_subprocess.py",
+        "forbidden_category": "command_injection",
+        "false_positive": false
+      },
+      {
+        "path": "fixtures/eval/clean/safe_yaml.py",
+        "forbidden_category": "unsafe_yaml_load",
+        "false_positive": false
+      },
+      {
+        "path": "fixtures/eval/clean/safe_verify.py",
+        "forbidden_category": "verify_false",
+        "false_positive": false
+      },
+      {
+        "path": "fixtures/eval/clean/safe_timeout.py",
+        "forbidden_category": "missing_timeout",
+        "false_positive": false
+      },
+      {
+        "path": "fixtures/eval/clean/safe_flask.py",
+        "forbidden_category": "flask_debug_true",
+        "false_positive": false
+      },
+      {
+        "path": "fixtures/eval/clean/safe_sql.py",
+        "forbidden_category": "sql_injection",
+        "false_positive": false
+      }
+    ]
+  },
+  "remediation": {
+    "autofix_expected_cases": 6,
+    "autofix_candidate": 6,
+    "coverage": 1.0,
+    "per_case": [
+      {
+        "path": "fixtures/mvp/command_injection/vuln_os_system.py",
+        "category": "command_injection",
+        "autofix_candidate": true,
+        "modes": [
+          "autofix_candidate"
+        ]
+      },
+      {
+        "path": "fixtures/mvp/command_injection/vuln_shell_true.py",
+        "category": "command_injection",
+        "autofix_candidate": true,
+        "modes": [
+          "autofix_candidate"
+        ]
+      },
+      {
+        "path": "fixtures/mvp/unsafe_yaml_load/vuln_yaml_load.py",
+        "category": "unsafe_yaml_load",
+        "autofix_candidate": true,
+        "modes": [
+          "autofix_candidate"
+        ]
+      },
+      {
+        "path": "fixtures/mvp/https_verify_false/vuln_requests_verify_false.py",
+        "category": "verify_false",
+        "autofix_candidate": true,
+        "modes": [
+          "autofix_candidate"
+        ]
+      },
+      {
+        "path": "fixtures/mvp/missing_timeout/vuln_requests_no_timeout.py",
+        "category": "missing_timeout",
+        "autofix_candidate": true,
+        "modes": [
+          "autofix_candidate"
+        ]
+      },
+      {
+        "path": "fixtures/mvp/flask_debug_true/vuln_flask_debug_true.py",
+        "category": "flask_debug_true",
+        "autofix_candidate": true,
+        "modes": [
+          "autofix_candidate"
+        ]
+      }
+    ]
+  }
+}
