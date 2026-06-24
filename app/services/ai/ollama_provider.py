@@ -53,6 +53,14 @@ def _parse_action_steps(content: dict[str, Any]) -> list[str]:
     return steps[:4]
 
 
+def _clean_str(content: dict[str, Any], key: str) -> str:
+    """Lee una clave de texto de la respuesta IA sin exigir su presencia."""
+    value = content.get(key, "")
+    if value is None:
+        return ""
+    return str(value).strip()
+
+
 def _build_prompt(finding: NormalizedFinding, *, include_snippet: bool) -> str:
     lines = [
         _SYSTEM_INSTRUCTIONS,
@@ -117,10 +125,18 @@ class OllamaProvider:
                 timeout=self.timeout_sec,
             )
             content = json.loads(raw["response"])
+            if not isinstance(content, dict):
+                raise ValueError("la respuesta IA no es un objeto JSON")
+            summary = _clean_str(content, "summary")
+            risk = _clean_str(content, "risk")
+            if not summary or not risk:
+                raise ValueError("respuesta IA sin 'summary' o 'risk'")
             explanation = AIExplanation(
-                summary=str(content["summary"]),
-                risk=str(content["risk"]),
-                suggestion=str(content["suggestion"]),
+                summary=summary,
+                risk=risk,
+                # 'suggestion' es opcional: los modelos pequeños a veces la omiten;
+                # se conserva el resto de la explicación en vez de descartarla.
+                suggestion=_clean_str(content, "suggestion"),
                 provider=self.name,
                 model=self.model,
                 prompt_version=PROMPT_VERSION,

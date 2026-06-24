@@ -82,10 +82,10 @@
       <p>No hay hallazgos visibles con los filtros aplicados.</p>
       {% endif %}
       {% for row in scan.findings %}
-      <article class="report-finding">
+      <article class="report-finding" data-severity="{{ row.severity }}">
         <h3>#{{ row.id }} · {{ row.title }}</h3>
         <p class="report-finding-meta">
-          <strong>{{ row.severity_label }}</strong> ·
+          <strong class="report-sev">{{ row.severity_label }}</strong> ·
           <code>{{ row.file }}:{{ row.line_start }}</code> ·
           {{ row.tool }} / <code>{{ row.rule_id }}</code> ·
           <code>{{ row.category }}</code>
