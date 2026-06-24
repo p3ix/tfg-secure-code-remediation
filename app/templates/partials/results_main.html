@@ -61,7 +61,7 @@
     {% endif %}
 
     {% for row in scan.findings %}
-    <article class="finding" id="finding-{{ row.id }}">
+    <article class="finding" data-severity="{{ row.severity }}" id="finding-{{ row.id }}">
       <div class="finding-top">
         <div>
           <h3>#{{ row.id }} · {{ row.title }}</h3>
