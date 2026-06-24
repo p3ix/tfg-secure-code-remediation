@@ -17,6 +17,21 @@ Este documento resume qué hace el sistema con cada categoría del MVP: detecci�
 - Categoría SQL injection acotada a **detección y propuesta**, coherente con el alcance.
 - Resultados visibles vía API y vista web mínima (`/dashboard`) además del JSON presentable.
 
+## Evaluación cuantitativa (recall, falsos positivos, remediación)
+
+Esta tabla es la **lectura cualitativa** por categoría. La **medición cuantitativa**
+automática (recall por categoría, cobertura por herramienta, clasificación CWE/OWASP,
+especificidad sobre un corpus limpio y cobertura de remediación) se genera con:
+
+```bash
+python -m app.services.evaluation
+```
+
+sobre el ground truth de `fixtures/eval/ground_truth.json`, y se publica en
+[evaluation-metrics.md](evaluation-metrics.md) (datos en `evaluation-metrics.json`).
+El cálculo de métricas es determinista y está cubierto por
+`tests/test_evaluation_metrics.py`.
+
 ## Duplicados entre herramientas y hallazgos informativos
 
 Para la defensa: varias filas por el mismo fichero pueden deberse a Bandit + Semgrep, o a reglas distintas (p. ej. B404 + B602). El parámetro `hide_info` en la vista presentable reduce ruido para demos. Detalle en [scan-noise-and-duplicates.md](scan-noise-and-duplicates.md).

@@ -1,0 +1,21 @@
+{
+  "description": "Ground truth para la evaluación cuantitativa del MVP. Cada caso vulnerable tiene una vulnerabilidad principal etiquetada (categoría MVP + CWE) y si se espera remediación automática. Los casos limpios son variantes seguras que NO deben disparar la categoría indicada (control de falsos positivos).",
+  "vulnerable": [
+    {"path": "fixtures/mvp/command_injection/vuln_os_system.py", "category": "command_injection", "cwe_id": 78, "autofix_expected": true},
+    {"path": "fixtures/mvp/command_injection/vuln_shell_true.py", "category": "command_injection", "cwe_id": 78, "autofix_expected": true},
+    {"path": "fixtures/mvp/unsafe_yaml_load/vuln_yaml_load.py", "category": "unsafe_yaml_load", "cwe_id": 502, "autofix_expected": true},
+    {"path": "fixtures/mvp/https_verify_false/vuln_requests_verify_false.py", "category": "verify_false", "cwe_id": 295, "autofix_expected": true},
+    {"path": "fixtures/mvp/missing_timeout/vuln_requests_no_timeout.py", "category": "missing_timeout", "cwe_id": 400, "autofix_expected": true},
+    {"path": "fixtures/mvp/missing_timeout/vuln_httpx_no_timeout.py", "category": "missing_timeout", "cwe_id": 400, "autofix_expected": false},
+    {"path": "fixtures/mvp/flask_debug_true/vuln_flask_debug_true.py", "category": "flask_debug_true", "cwe_id": 489, "autofix_expected": true},
+    {"path": "fixtures/mvp/sql_injection/vuln_sql_injection.py", "category": "sql_injection", "cwe_id": 89, "autofix_expected": false}
+  ],
+  "clean": [
+    {"path": "fixtures/eval/clean/safe_subprocess.py", "forbidden_category": "command_injection"},
+    {"path": "fixtures/eval/clean/safe_yaml.py", "forbidden_category": "unsafe_yaml_load"},
+    {"path": "fixtures/eval/clean/safe_verify.py", "forbidden_category": "verify_false"},
+    {"path": "fixtures/eval/clean/safe_timeout.py", "forbidden_category": "missing_timeout"},
+    {"path": "fixtures/eval/clean/safe_flask.py", "forbidden_category": "flask_debug_true"},
+    {"path": "fixtures/eval/clean/safe_sql.py", "forbidden_category": "sql_injection"}
+  ]
+}
