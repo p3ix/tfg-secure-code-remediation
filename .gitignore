@@ -16,6 +16,9 @@ __pycache__/
 .coverage
 htmlcov/
 
+# Resultados de análisis persistidos (TFG_SCAN_STORE_DIR)
+var/
+
 # IDE
 .vscode/
 .idea/

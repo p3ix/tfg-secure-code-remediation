@@ -53,6 +53,8 @@ uvicorn app.main:app --reload
 
 Opcional: copia `.env.example` a `.env` en la raíz del repo (IA, límites ZIP, etc.). El backend **carga `.env` al arrancar**; las variables ya exportadas en la shell o en systemd tienen prioridad.
 
+Por defecto los resultados de análisis viven solo en memoria. Para que **sobrevivan a reinicios** (enlaces `/results/{id}` y `/report` persistentes), define `TFG_SCAN_STORE_DIR` (p. ej. `var/scans`); se guarda un `.json` por análisis y se purgan por TTL (`TFG_SCAN_STORE_TTL_SEC`, 7 días) y número máximo (`TFG_SCAN_STORE_MAX_ENTRIES`, 200).
+
 - Salud: `GET http://127.0.0.1:8000/health`
 - Inicio: `GET http://127.0.0.1:8000/` (redirección 302 a `/dashboard`)
 - Dashboard: `GET http://127.0.0.1:8000/dashboard`
