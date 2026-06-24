@@ -95,6 +95,29 @@ def test_explain_degrades_on_missing_keys(monkeypatch: pytest.MonkeyPatch) -> No
     assert _provider().explain(_finding()) is None
 
 
+def test_explain_tolerates_missing_suggestion(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Modelos pequeños a veces omiten 'suggestion'; no debe descartarse la explicación.
+    def fake_post(url: str, payload: dict, timeout: float) -> dict:
+        return {
+            "response": json.dumps(
+                {
+                    "summary": "resumen",
+                    "risk": "riesgo",
+                    "action_steps": ["paso 1"],
+                }
+            )
+        }
+
+    monkeypatch.setattr(mod, "_http_post_json", fake_post)
+    explanation = _provider().explain(_finding())
+
+    assert explanation is not None
+    assert explanation.summary == "resumen"
+    assert explanation.risk == "riesgo"
+    assert explanation.suggestion == ""
+    assert explanation.action_steps == ["paso 1"]
+
+
 def test_prompt_includes_file_and_line() -> None:
     prompt = _build_prompt(_finding(), include_snippet=False)
     assert "fichero: app.py" in prompt
