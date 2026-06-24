@@ -4,6 +4,8 @@ import time
 from dataclasses import dataclass, replace
 from typing import Any
 
+from app.services.ai.cache import ExplanationCache
+
 DEFAULT_SCAN_STORE_TTL_SEC = 3600.0
 
 
@@ -30,6 +32,9 @@ class ScanResultStore:
     def __init__(self, *, ttl_sec: float = DEFAULT_SCAN_STORE_TTL_SEC) -> None:
         self._ttl_sec = ttl_sec
         self._entries: dict[str, StoredScanResult] = {}
+        # Caché de explicaciones IA por análisis: el enriquecido se hace una vez y
+        # se reutiliza en cada render de /results y /report (sin recomputar Ollama).
+        self._ai_caches: dict[str, ExplanationCache] = {}
 
     def put(
         self,
@@ -58,8 +63,17 @@ class ScanResultStore:
             return None
         if time.monotonic() - entry.stored_at_monotonic > self._ttl_sec:
             del self._entries[analysis_id]
+            self._ai_caches.pop(analysis_id, None)
             return None
         return entry
+
+    def get_ai_cache(self, analysis_id: str) -> ExplanationCache:
+        """Caché IA del análisis; se crea la primera vez y se reutiliza después."""
+        cache = self._ai_caches.get(analysis_id)
+        if cache is None:
+            cache = ExplanationCache()
+            self._ai_caches[analysis_id] = cache
+        return cache
 
     def mark_ai_enriched(self, analysis_id: str) -> StoredScanResult | None:
         entry = self.get(analysis_id)
@@ -92,6 +106,7 @@ class ScanResultStore:
 
     def clear(self) -> None:
         self._entries.clear()
+        self._ai_caches.clear()
 
     def _purge_expired(self) -> None:
         now = time.monotonic()
@@ -102,6 +117,7 @@ class ScanResultStore:
         ]
         for key in expired:
             del self._entries[key]
+            self._ai_caches.pop(key, None)
 
 
 _scan_result_store = ScanResultStore()

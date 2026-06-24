@@ -17,6 +17,7 @@ from pydantic import BaseModel, Field
 from starlette.templating import Jinja2Templates
 
 from app.config import get_settings
+from app.services.ai.cache import ExplanationCache
 from app.services.ai.factory import get_ai_provider
 from app.services.ai.provider import AIProvider
 from app.services.analysis_service import analyze_fixtures_reports
@@ -206,11 +207,13 @@ def _build_dashboard_scan(
     hide_info: bool,
     group_equivalent: bool,
     enable_ai_explanations: bool = False,
+    ai_cache: ExplanationCache | None = None,
 ) -> dict:
     scan = presentable_from_internal_analysis(
         internal_scan,
         group_equivalent=group_equivalent,
         ai_provider=_resolve_ai_provider(user_requested=enable_ai_explanations),
+        ai_cache=ai_cache,
     )
     return filter_presentable_scan(scan, hide_info=hide_info)
 
@@ -357,6 +360,10 @@ def _scan_from_stored(
     group_equivalent: bool | None = None,
     enable_ai_explanations: bool | None = None,
 ) -> dict:
+    analysis_id = stored.internal.get("analysis_id")
+    ai_cache = (
+        get_scan_result_store().get_ai_cache(analysis_id) if analysis_id else None
+    )
     return _build_dashboard_scan(
         stored.internal,
         hide_info=hide_info if hide_info is not None else stored.hide_info,
@@ -366,6 +373,7 @@ def _scan_from_stored(
         enable_ai_explanations=enable_ai_explanations
         if enable_ai_explanations is not None
         else stored.enable_ai_explanations,
+        ai_cache=ai_cache,
     )
 
 
