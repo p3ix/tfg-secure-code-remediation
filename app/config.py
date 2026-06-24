@@ -183,3 +183,20 @@ class Settings:
             minimum=1,
         )
         self.enable_local_path: bool = _parse_bool_env("TFG_ENABLE_LOCAL_PATH", True)
+        # Persistencia de resultados de análisis. Si TFG_SCAN_STORE_DIR está vacío,
+        # el almacén es solo en memoria (comportamiento por defecto). Con un directorio,
+        # los resultados sobreviven a reinicios; se purgan por TTL y por número máximo.
+        _scan_dir = os.environ.get("TFG_SCAN_STORE_DIR", "").strip()
+        self.scan_store_dir: Path | None = (
+            Path(_scan_dir).resolve() if _scan_dir else None
+        )
+        self.scan_store_ttl_sec: int = _parse_int_env(
+            "TFG_SCAN_STORE_TTL_SEC",
+            7 * 24 * 3600,  # 7 días
+            minimum=1,
+        )
+        self.scan_store_max_entries: int = _parse_int_env(
+            "TFG_SCAN_STORE_MAX_ENTRIES",
+            200,
+            minimum=1,
+        )

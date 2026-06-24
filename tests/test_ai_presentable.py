@@ -1,6 +1,29 @@
+from app.models.ai_explanation import AIExplanation
 from app.models.finding import NormalizedFinding
+from app.services.ai.cache import ExplanationCache
 from app.services.ai.stub_provider import StubProvider
 from app.services.presentable_scan import build_presentable_scan
+
+
+class _CountingProvider:
+    """Proveedor que cuenta las llamadas reales a explain (para verificar caché)."""
+
+    name = "counting"
+    model = "test"
+
+    def __init__(self) -> None:
+        self.calls = 0
+
+    def explain(self, finding: NormalizedFinding) -> AIExplanation:
+        self.calls += 1
+        return AIExplanation(
+            summary="s",
+            risk="r",
+            suggestion="g",
+            provider=self.name,
+            model=self.model,
+            prompt_version="v3",
+        )
 
 
 def _findings() -> list[NormalizedFinding]:
@@ -85,3 +108,32 @@ def test_presentable_explanation_uses_cache_marker() -> None:
     )
     cached_flags = [row["ai_explanation"]["cached"] for row in out["findings"]]
     assert cached_flags == [False, True]
+
+
+def test_shared_cache_avoids_recomputing_across_renders() -> None:
+    # Caché compartida entre dos renders del mismo análisis: el proveedor solo se
+    # invoca en el primero; el segundo (p. ej. /report) reutiliza la caché.
+    provider = _CountingProvider()
+    cache = ExplanationCache()
+    findings = _findings()
+
+    first = build_presentable_scan(
+        findings,
+        analysis_target="x",
+        execution_mode="runtime",
+        ai_provider=provider,
+        ai_cache=cache,
+    )
+    assert provider.calls == len(findings)
+
+    second = build_presentable_scan(
+        findings,
+        analysis_target="x",
+        execution_mode="runtime",
+        ai_provider=provider,
+        ai_cache=cache,
+    )
+    # No hay nuevas llamadas al proveedor: todo viene de la caché compartida.
+    assert provider.calls == len(findings)
+    assert all(row["ai_explanation"]["cached"] for row in second["findings"])
+    assert all(row["ai_explanation"] is not None for row in first["findings"])

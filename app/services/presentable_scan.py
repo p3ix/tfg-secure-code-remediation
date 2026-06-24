@@ -175,6 +175,7 @@ def build_presentable_scan(
     reports: dict[str, str] | None = None,
     group_equivalent: bool = False,
     ai_provider: AIProvider | None = None,
+    ai_cache: ExplanationCache | None = None,
 ) -> dict[str, Any]:
     """
     JSON estable para vista previa / memoria: sin raw_tool_data, mensajes acotados.
@@ -191,7 +192,8 @@ def build_presentable_scan(
         text = str(value).strip() if value is not None else ""
         return text or default
 
-    ai_cache = ExplanationCache()
+    if ai_cache is None:
+        ai_cache = ExplanationCache()
 
     if group_equivalent:
         groups = group_findings_by_equivalence(findings)
@@ -256,6 +258,7 @@ def presentable_from_internal_analysis(
     *,
     group_equivalent: bool = False,
     ai_provider: AIProvider | None = None,
+    ai_cache: ExplanationCache | None = None,
 ) -> dict[str, Any]:
     """
     Convierte la respuesta interna de analyze_fixtures_reports / analyze_fixtures_runtime
@@ -291,6 +294,7 @@ def presentable_from_internal_analysis(
         reports=reports,
         group_equivalent=group_equivalent,
         ai_provider=ai_provider,
+        ai_cache=ai_cache,
     )
     if invalid_findings:
         out_meta = dict(out.get("meta") or {})
