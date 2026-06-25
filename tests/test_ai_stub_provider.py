@@ -34,7 +34,7 @@ def test_stub_provider_returns_explanation_for_known_category() -> None:
 
 
 def test_stub_provider_is_deterministic() -> None:
-    finding = _finding("yaml_load")
+    finding = _finding("unsafe_yaml_load")
     first = StubProvider().explain(finding)
     second = StubProvider().explain(finding)
 
@@ -48,6 +48,28 @@ def test_stub_provider_falls_back_for_unknown_category() -> None:
     assert explanation.summary
     assert explanation.risk
     assert explanation.suggestion
+
+
+def test_stub_provider_uses_real_mvp_category_keys() -> None:
+    # Las categorías reales de los parsers reciben texto curado, no el genérico.
+    explanation = StubProvider().explain(_finding("unsafe_yaml_load"))
+
+    assert "yaml" in explanation.summary.lower()
+    assert "safe_load" in explanation.suggestion.lower()
+
+
+def test_stub_provider_includes_before_after_example_for_known_category() -> None:
+    explanation = StubProvider().explain(_finding("unsafe_yaml_load"))
+
+    assert explanation.example_before == "yaml.load(data, Loader=yaml.Loader)"
+    assert explanation.example_after == "yaml.safe_load(data)"
+
+
+def test_stub_provider_omits_example_for_unknown_category() -> None:
+    explanation = StubProvider().explain(_finding("totally_unknown_category"))
+
+    assert explanation.example_before is None
+    assert explanation.example_after is None
 
 
 def test_explanation_to_dict_keys() -> None:

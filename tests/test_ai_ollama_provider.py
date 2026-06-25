@@ -59,8 +59,56 @@ def test_explain_success(monkeypatch: pytest.MonkeyPatch) -> None:
     assert explanation.suggestion == "sugerencia"
     assert explanation.action_steps == ["paso 1", "paso 2"]
     assert explanation.location_hint == "app.py:1"
-    assert explanation.prompt_version == "v3"
+    assert explanation.prompt_version == "v4"
     assert explanation.prompt_hash and len(explanation.prompt_hash) == 16
+    # Sin ejemplo en la respuesta → campos None (degradable).
+    assert explanation.example_before is None
+    assert explanation.example_after is None
+
+
+def test_explain_parses_before_after_example(monkeypatch: pytest.MonkeyPatch) -> None:
+    def fake_post(url: str, payload: dict, timeout: float) -> dict:
+        return {
+            "response": json.dumps(
+                {
+                    "summary": "resumen",
+                    "risk": "riesgo",
+                    "suggestion": "sugerencia",
+                    "action_steps": ["paso 1"],
+                    "example_before": "subprocess.run(cmd, shell=True)",
+                    "example_after": "subprocess.run([prog, arg])",
+                }
+            )
+        }
+
+    monkeypatch.setattr(mod, "_http_post_json", fake_post)
+    explanation = _provider().explain(_finding())
+
+    assert explanation is not None
+    assert explanation.example_before == "subprocess.run(cmd, shell=True)"
+    assert explanation.example_after == "subprocess.run([prog, arg])"
+
+
+def test_explain_tolerates_missing_example(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Si el modelo omite el ejemplo, la explicación sigue siendo válida.
+    def fake_post(url: str, payload: dict, timeout: float) -> dict:
+        return {
+            "response": json.dumps(
+                {
+                    "summary": "resumen",
+                    "risk": "riesgo",
+                    "suggestion": "sugerencia",
+                    "action_steps": ["paso 1"],
+                }
+            )
+        }
+
+    monkeypatch.setattr(mod, "_http_post_json", fake_post)
+    explanation = _provider().explain(_finding())
+
+    assert explanation is not None
+    assert explanation.example_before is None
+    assert explanation.example_after is None
 
 
 def test_explain_degrades_on_network_error(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -140,3 +188,11 @@ def test_prompt_contains_anti_injection_hardening() -> None:
     prompt = _build_prompt(_finding(), include_snippet=False)
     assert "no confiables" in prompt
     assert "ignóralo" in prompt or "ignora" in prompt.lower()
+
+
+def test_prompt_requests_before_after_example() -> None:
+    prompt = _build_prompt(_finding(), include_snippet=False)
+    assert "example_before" in prompt
+    assert "example_after" in prompt
+    # Debe quedar claro que es ilustrativo, no un parche para aplicar.
+    assert "NO un parche" in prompt

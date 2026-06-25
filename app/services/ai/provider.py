@@ -5,7 +5,7 @@ from typing import Protocol, runtime_checkable
 from app.models.ai_explanation import AIExplanation
 from app.models.finding import NormalizedFinding
 
-PROMPT_VERSION = "v3"
+PROMPT_VERSION = "v4"
 
 
 @runtime_checkable
