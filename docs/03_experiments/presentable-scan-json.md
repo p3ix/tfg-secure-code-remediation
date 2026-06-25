@@ -6,7 +6,7 @@ Tener un contrato de respuesta estable para ver el resultado de un escaneo como 
 
 ## Versión del esquema
 
-El campo `schema_version` (actualmente `1.0`) permite evolucionar el formato sin romper clientes si más adelante se añaden campos.
+El campo `schema_version` (en su origen `1.0`; hoy `1.2` tras añadir `ai_explanation` en 1.1 y el ejemplo `example_before`/`example_after` en 1.2) permite evolucionar el formato sin romper clientes: los campos añadidos son opcionales y su ausencia equivale a "sin ese dato".
 
 ## Endpoints
 

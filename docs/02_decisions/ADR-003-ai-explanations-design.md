@@ -62,9 +62,11 @@ Las explicaciones se cachean por clave `(provider, model, mvp_category, cwe_id, 
 
 Para **enriquecer con IA sin re-escanear** (WEB-5), el dashboard guarda el payload interno del último análisis web exitoso en un almacén efímero en memoria, indexado por `analysis_id` y con TTL de ~60 minutos. Permite regenerar solo la capa explicativa; no sustituye la persistencia de informes SAST.
 
-### 6. Contrato de salida — `ai_explanation` opcional, `schema_version` 1.1
+### 6. Contrato de salida — `ai_explanation` opcional, `schema_version` 1.1 → 1.2
 
-Se añade `ai_explanation: AIExplanation | None` al JSON presentable por hallazgo (y por grupo equivalente) y un bloque correspondiente en el dashboard. El campo es **opcional** y se sube `schema_version` a **1.1** para no romper a los consumidores ni los tests del 1.0. La respuesta registra `model` y `prompt_version` cuando hay generación (trazabilidad).
+Se añade `ai_explanation: AIExplanation | None` al JSON presentable por hallazgo (y por grupo equivalente) y un bloque correspondiente en el dashboard. El campo es **opcional** y se subió `schema_version` a **1.1** para no romper a los consumidores ni los tests del 1.0. La respuesta registra `model` y `prompt_version` cuando hay generación (trazabilidad).
+
+> **Actualización (fase del ejemplo antes/después):** al incorporar el ejemplo ilustrativo (§1) se añadieron los campos opcionales `example_before`/`example_after` a `AIExplanation` y se subió `schema_version` a **1.2**. El cambio es de nuevo retrocompatible (campos opcionales, ausentes = sin ejemplo) y `prompt_version` pasó a **v4**.
 
 ### 7. Evaluación — revisión cualitativa sobre el corpus
 
@@ -91,7 +93,7 @@ La utilidad de la IA se evalúa con una **tabla de evaluación** (estilo `docs/0
 - Privacidad por diseño con la configuración por defecto (`ollama` en localhost, snippet desactivado).
 - Demo y defensa del TFG sin depender de red ni clave externa.
 - La memoria puede describir evaluación comparable (local vs API) sobre un punto de extensión ya definido.
-- El contrato `schema_version` 1.1 con campo opcional evita una rotura incompatible al conectar proveedores reales.
+- El contrato `schema_version` con campos opcionales (1.1 al añadir `ai_explanation`; 1.2 al añadir el ejemplo `example_before`/`example_after`) evita roturas incompatibles al evolucionar la capa IA.
 
 **Negativas / asumidas:** calidad y latencia del modelo local por debajo de modelos cloud grandes; requisitos de hardware para Ollama; complejidad de la abstracción y la caché (compensada con testabilidad).
 
