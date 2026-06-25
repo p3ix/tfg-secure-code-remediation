@@ -34,3 +34,5 @@ plantillaLatex-master/
 # ZIPs de demo / proyectos vulnerables de prueba
 vulnerable_demo.zip
 *.zip
+
+docs/07_memoria/00_repaso_completo_para_tutor.md
