@@ -122,6 +122,41 @@ def test_analyze_with_ai_includes_explanations(monkeypatch) -> None:
         get_settings.cache_clear()
 
 
+def test_results_render_before_after_example(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "app.services.web_analysis_flow.analyze_zip_bytes",
+        lambda content, *, analysis_id=None: _runtime_payload(analysis_id=analysis_id),
+    )
+    monkeypatch.setenv("TFG_AI_EXPLANATIONS_ENABLED", "1")
+    monkeypatch.setenv("TFG_AI_PROVIDER", "stub")
+    get_settings.cache_clear()
+    get_scan_result_store().clear()
+    try:
+        response = client.post(
+            "/analyze",
+            data={
+                "analysis_mode": "upload_zip",
+                "enable_ai_explanations": "true",
+            },
+            files={"file": ("demo.zip", b"PK\x03\x04x", "application/zip")},
+            follow_redirects=True,
+        )
+        assert response.status_code == 200
+        html = response.text
+        # Bloque visual antes/después (command_injection trae ejemplo en el stub).
+        assert "Ejemplo (antes / después)" in html
+        assert "Antes (vulnerable)" in html
+        assert "Después (corregido)" in html
+        assert "ai-example-before" in html
+        assert "ai-example-after" in html
+        assert "shell=True" in html
+        # Disclaimer de que es ilustrativo, no un parche aplicado.
+        assert "Ejemplo ilustrativo generado por IA" in html
+    finally:
+        get_scan_result_store().clear()
+        get_settings.cache_clear()
+
+
 def test_results_view_prefs_hide_info_without_rescan(monkeypatch) -> None:
     monkeypatch.setattr(
         "app.services.web_analysis_flow.analyze_zip_bytes",
