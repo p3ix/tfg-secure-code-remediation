@@ -36,7 +36,7 @@ def test_build_presentable_scan_shape() -> None:
         reports={"bandit": "r1.json", "semgrep": "r2.json"},
     )
 
-    assert out["schema_version"] == "1.1"
+    assert out["schema_version"] == "1.2"
     assert out["meta"]["execution_mode"] == "static_reports"
     assert "generated_at" in out["meta"]
     assert out["meta"]["reports"]["bandit"] == "r1.json"
@@ -239,6 +239,6 @@ def test_presentable_fixtures_endpoint_if_reports_exist() -> None:
 
     assert response.status_code == 200
     body = response.json()
-    assert body["schema_version"] == "1.1"
+    assert body["schema_version"] == "1.2"
     assert body["summary"]["total_findings"] > 0
     assert isinstance(body["findings"], list)

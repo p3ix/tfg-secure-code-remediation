@@ -14,6 +14,11 @@ class AIExplanation:
 
     `location_hint` y `code_focus` se derivan del hallazgo normalizado (parser),
     no del modelo. `action_steps` aporta pasos concretos de remediación.
+
+    `example_before` / `example_after` son un ejemplo ilustrativo del patrón
+    (fragmento vulnerable → corregido) con fines pedagógicos. Es material educativo
+    mostrado en la UI: la IA no aplica ese cambio al proyecto del usuario ni lo
+    verifica (la remediación verificada la dan los remediators deterministas).
     """
 
     summary: str
@@ -27,6 +32,8 @@ class AIExplanation:
     location_hint: str | None = None
     code_focus: str | None = None
     action_steps: list[str] | None = None
+    example_before: str | None = None
+    example_after: str | None = None
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -41,4 +48,6 @@ class AIExplanation:
             "location_hint": self.location_hint,
             "code_focus": self.code_focus,
             "action_steps": list(self.action_steps) if self.action_steps else [],
+            "example_before": self.example_before,
+            "example_after": self.example_after,
         }
