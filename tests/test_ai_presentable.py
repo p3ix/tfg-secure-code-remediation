@@ -47,7 +47,7 @@ def _findings() -> list[NormalizedFinding]:
             line_start=4,
             raw_message="yaml.load",
             severity="medium",
-            mvp_category="yaml_load",
+            mvp_category="unsafe_yaml_load",
             candidate_for_remediation=True,
             remediation_mode="autofix_candidate",
             cwe_id=20,
