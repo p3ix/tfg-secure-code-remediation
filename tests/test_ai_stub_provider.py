@@ -66,7 +66,43 @@ def test_explanation_to_dict_keys() -> None:
         "location_hint",
         "code_focus",
         "action_steps",
+        "example_before",
+        "example_after",
     }
+
+
+def test_explanation_to_dict_reflects_before_after_example() -> None:
+    explanation = AIExplanation(
+        summary="s",
+        risk="r",
+        suggestion="sug",
+        provider="stub",
+        model="m",
+        prompt_version="v3",
+        example_before="yaml.load(data, Loader=yaml.Loader)",
+        example_after="yaml.safe_load(data)",
+    )
+
+    payload = explanation.to_dict()
+
+    assert payload["example_before"] == "yaml.load(data, Loader=yaml.Loader)"
+    assert payload["example_after"] == "yaml.safe_load(data)"
+
+
+def test_explanation_to_dict_example_defaults_to_none() -> None:
+    explanation = AIExplanation(
+        summary="s",
+        risk="r",
+        suggestion="sug",
+        provider="stub",
+        model="m",
+        prompt_version="v3",
+    )
+
+    payload = explanation.to_dict()
+
+    assert payload["example_before"] is None
+    assert payload["example_after"] is None
 
 
 def test_stub_provider_includes_location_and_steps() -> None:

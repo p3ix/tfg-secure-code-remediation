@@ -61,7 +61,7 @@ def test_presentable_without_provider_has_null_explanation() -> None:
         analysis_target="x",
         execution_mode="runtime",
     )
-    assert out["schema_version"] == "1.1"
+    assert out["schema_version"] == "1.2"
     for row in out["findings"]:
         assert row["ai_explanation"] is None
 

@@ -12,7 +12,7 @@ from app.services.findings_dedup import (
     primary_finding,
 )
 
-SCHEMA_VERSION = "1.1"
+SCHEMA_VERSION = "1.2"
 
 
 def _ai_explanation_for(

@@ -14,14 +14,19 @@ El ADR-002 ya estableció los principios: IA **opcional**, desactivada por defec
 
 ## Decisión
 
-### 1. Rol de la IA — explicación + sugerencia en lenguaje natural, nunca código
+### 1. Rol de la IA — explicación, sugerencia y ejemplo ilustrativo; nunca un parche aplicado ni verificado
 
 La IA produce, por hallazgo:
 
-- una **explicación** (riesgo, impacto y por qué es un problema, citando CWE/OWASP); y
-- una **sugerencia de remediación en lenguaje natural** (cómo se corregiría, a alto nivel).
+- una **explicación** (riesgo, impacto y por qué es un problema, citando CWE/OWASP);
+- una **sugerencia de remediación en lenguaje natural** (cómo se corregiría, a alto nivel); y
+- un **ejemplo ilustrativo "antes / después"** del patrón (fragmento *vulnerable → corregido*), con fines pedagógicos.
 
-La IA **no genera ni aplica parches de código**. Las remediaciones automáticas siguen siendo exclusivamente las de los *remediators* deterministas, validadas por el módulo de verificación (re-ejecución SAST). El flujo detect→repair→verify no depende de la IA.
+> **Revisión (post-release v0.1.0):** la versión original de este ADR prohibía que la IA *generara código*. Esa regla se **flexibiliza**: se permite el ejemplo ilustrativo "antes/después" porque mejora notablemente la claridad y el **coste/riesgo es bajo en este diseño** — el modelo es **local (Ollama)**, así que el ejemplo se genera en la máquina sin enviar nada fuera, y es **material educativo mostrado en la UI**, no un parche que se aplique al proyecto del usuario.
+
+La IA **no aplica cambios sobre el código del usuario, no descarga parches y no emite garantía de corrección**: el ejemplo "antes/después" **no se verifica por reescaneo**. Las remediaciones **aplicadas y verificadas** siguen siendo exclusivamente las de los *remediators* deterministas, validadas por el módulo de verificación (re-ejecución SAST). El flujo detect→repair→verify no depende de la IA.
+
+**Distinción que se mantiene como invariante:** *ejemplo ilustrativo de IA* (orientativo, en cualquier hallazgo) ≠ *parche determinista verificado* (aplicado y comprobado por reescaneo, solo en categorías acotadas). La IA aporta cobertura educativa; los remediators, garantía.
 
 ### 2. Arquitectura — `AIProvider` con tres implementaciones (local primero)
 

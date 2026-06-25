@@ -99,7 +99,7 @@ def test_run_fixtures_presentable_endpoint_returns_filtered_payload(monkeypatch)
 
     assert response.status_code == 200
     payload = response.json()
-    assert payload["schema_version"] == "1.1"
+    assert payload["schema_version"] == "1.2"
     assert payload["meta"]["execution_mode"] == "runtime"
     assert isinstance(payload["meta"]["analysis_id"], str)
     assert payload["meta"]["presentable_filter"] == "hide_info"
