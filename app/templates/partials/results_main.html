@@ -142,6 +142,28 @@
             </ol>
           </dd>
           {% endif %}
+          {% if row.ai_explanation.example_before or row.ai_explanation.example_after %}
+          <dt>Ejemplo (antes / después)</dt>
+          <dd>
+            <div class="ai-example">
+              {% if row.ai_explanation.example_before %}
+              <div class="ai-example-col ai-example-before">
+                <span class="ai-example-label">Antes (vulnerable)</span>
+                <pre><code>{{ row.ai_explanation.example_before }}</code></pre>
+              </div>
+              {% endif %}
+              {% if row.ai_explanation.example_after %}
+              <div class="ai-example-col ai-example-after">
+                <span class="ai-example-label">Después (corregido)</span>
+                <pre><code>{{ row.ai_explanation.example_after }}</code></pre>
+              </div>
+              {% endif %}
+            </div>
+            <p class="ai-example-note">
+              Ejemplo ilustrativo generado por IA; no se aplica a tu código.
+            </p>
+          </dd>
+          {% endif %}
         </dl>
         <p class="ai-disclaimer">
           Explicación generada por IA; puede contener errores. La verificación la

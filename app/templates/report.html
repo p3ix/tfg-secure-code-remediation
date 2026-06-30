@@ -98,6 +98,19 @@
           {% if row.ai_explanation.suggestion %}
           <p><em>Sugerencia:</em> {{ row.ai_explanation.suggestion }}</p>
           {% endif %}
+          {% if row.ai_explanation.example_before or row.ai_explanation.example_after %}
+          <div class="report-ai-example">
+            {% if row.ai_explanation.example_before %}
+            <p><em>Antes (vulnerable):</em> <code>{{ row.ai_explanation.example_before }}</code></p>
+            {% endif %}
+            {% if row.ai_explanation.example_after %}
+            <p><em>Después (corregido):</em> <code>{{ row.ai_explanation.example_after }}</code></p>
+            {% endif %}
+            <p class="report-ai-example-note">
+              Ejemplo ilustrativo generado por IA; no se aplica al código.
+            </p>
+          </div>
+          {% endif %}
         </div>
         {% endif %}
       </article>
