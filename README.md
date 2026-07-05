@@ -1,34 +1,41 @@
 # TFG Secure Code Remediation
 
-Aplicación web para análisis y remediación asistida por IA de vulnerabilidades en proyectos Python.
+[![CI](https://github.com/p3ix/tfg-secure-code-remediation/actions/workflows/ci.yml/badge.svg)](https://github.com/p3ix/tfg-secure-code-remediation/actions/workflows/ci.yml)
+
+Aplicación web para el análisis de seguridad de proyectos Python: detección con **Bandit** y **Semgrep**, normalización y clasificación de hallazgos (CWE / OWASP Top 10 / OWASP ASVS), remediación asistida con verificación por reanálisis en patrones acotados, y una capa **opcional** de explicaciones asistidas por IA con proveedor local.
+
+Trabajo de Fin de Grado de Asier Lara. La memoria y los anexos (manuales de usuario y de programador incluidos) se entregan por separado; este repositorio contiene el producto software. La trazabilidad del desarrollo puede consultarse en las [issues](https://github.com/p3ix/tfg-secure-code-remediation/issues?q=is%3Aissue), las [pull requests](https://github.com/p3ix/tfg-secure-code-remediation/pulls?q=is%3Apr) y el [`CHANGELOG.md`](CHANGELOG.md).
 
 ## Estado del proyecto
 
-El **MVP** sobre `fixtures/mvp/` está operativo: detección con Bandit y Semgrep, modelo normalizado de hallazgos, clasificación CWE/OWASP/ASVS, remediación asistida con verificación en patrones acotados, pipeline, dashboard y JSON presentable (incl. agrupación opcional `group_equivalent`).
+Versión **v0.2.0** ([releases](https://github.com/p3ix/tfg-secure-code-remediation/releases)). Todo el flujo está operativo:
 
-En **ampliación**: análisis de **proyectos reales** (subida ZIP, ruta local bajo directorio permitido, clonado Git HTTPS acotado) operativo desde **web y API**; hito documentado en [`docs/04_delivery/release-web-operativa-sin-ia.md`](docs/04_delivery/release-web-operativa-sin-ia.md). La capa **IA** es opcional y queda para la fase siguiente ([`docs/02_decisions/ADR-002-ai-assisted-roadmap.md`](docs/02_decisions/ADR-002-ai-assisted-roadmap.md)).
+- **Detección y clasificación**: Bandit + Semgrep sobre el corpus `fixtures/mvp/` o sobre proyectos reales, con modelo normalizado de hallazgos y referencias CWE/OWASP/ASVS.
+- **Análisis de proyectos reales** desde web y API: subida **ZIP**, **clonado Git HTTPS** acotado y **ruta local** bajo una raíz permitida, con límites operativos configurables.
+- **Remediación asistida y verificación**: remediadores deterministas para patrones acotados del MVP, verificados por reanálisis (la inyección SQL queda como detección y propuesta, sin parche automático).
+- **Capa de IA opcional** (desactivada por defecto): explicaciones en lenguaje natural por hallazgo, con proveedor local **Ollama** recomendado y proveedor `stub` determinista para pruebas. La IA no aplica parches ni participa en la verificación.
+- **Evaluación reproducible** sobre corpus etiquetado: `python -m app.services.evaluation` (recall 0,875; especificidad 1,000; 0 falsos positivos en el corpus de control).
 
-## Documentación clave
+## Estructura del repositorio
 
-| Documento | Contenido |
-|-----------|-----------|
-| [`CHANGELOG.md`](CHANGELOG.md) | Historial de versiones (release `v0.1.0`) |
-| [`docs/00_scope.md`](docs/00_scope.md) | Alcance MVP y fases siguientes |
-| [`docs/01_roadmap_and_documentation_ritual.md`](docs/01_roadmap_and_documentation_ritual.md) | Hoja de ruta, ritual issues/docs, cadencia memoria |
-| [`docs/01_architecture_overview.md`](docs/01_architecture_overview.md) | Arquitectura |
-| [`docs/04_delivery/manual-usuario-web.md`](docs/04_delivery/manual-usuario-web.md) | Manual de usuario de la consola web (`/dashboard`) |
-| [`docs/04_delivery/release-web-operativa-sin-ia.md`](docs/04_delivery/release-web-operativa-sin-ia.md) | Hito: web operativa sin IA (checklist y verificación) |
-| [`docs/03_experiments/dashboard-web-analysis-console.md`](docs/03_experiments/dashboard-web-analysis-console.md) | Evolución de la interfaz web de análisis |
-| [`docs/06_references/README.md`](docs/06_references/README.md) | Referencias [REF-xxx] |
+| Ruta | Contenido |
+|------|-----------|
+| `app/` | Backend FastAPI: servicios de análisis, parsers, clasificación, remediadores, verificadores, capa IA y consola web |
+| `tests/` | Suite de pruebas (pytest); 281 pruebas con cobertura ~94 % sobre `app/` |
+| `fixtures/mvp/` | Corpus controlado de ejemplos vulnerables del MVP |
+| `fixtures/eval/` | Corpus de evaluación (casos limpios y verdad de referencia) |
+| `reports/` | Informes SAST de ejemplo y generados en runtime |
+| `scripts/` | Scripts de apoyo al desarrollo |
 
 ## Stack
 
 - Python 3.12+
 - FastAPI, Uvicorn, Jinja2
 - Bandit, Semgrep
-- pytest, httpx (tests)
-- pre-commit (opcional local)
+- pytest, pytest-cov, httpx (tests)
+- Ruff (lint), pre-commit (opcional local)
 - GitHub Actions (CI)
+- Ollama (opcional, IA local)
 
 ## Entorno de desarrollo
 
@@ -43,9 +50,9 @@ pip install -e ".[dev]"
 export PATH="$PWD/.venv/bin:$PATH"
 ```
 
-`bandit` y `semgrep` deben ser invocables por el backend (subprocesos). Semgrep puede necesitar **red** la primera vez para reglas.
+`bandit` y `semgrep` deben ser invocables por el backend (subprocesos). Semgrep puede necesitar **red** la primera vez para descargar reglas. En Windows, Semgrep no tiene soporte nativo: se recomienda trabajar bajo **WSL**.
 
-## Ejecutar la API
+## Ejecutar la aplicación
 
 ```bash
 uvicorn app.main:app --reload
@@ -55,42 +62,56 @@ Opcional: copia `.env.example` a `.env` en la raíz del repo (IA, límites ZIP, 
 
 Por defecto los resultados de análisis viven solo en memoria. Para que **sobrevivan a reinicios** (enlaces `/results/{id}` y `/report` persistentes), define `TFG_SCAN_STORE_DIR` (p. ej. `var/scans`); se guarda un `.json` por análisis y se purgan por TTL (`TFG_SCAN_STORE_TTL_SEC`, 7 días) y número máximo (`TFG_SCAN_STORE_MAX_ENTRIES`, 200).
 
-- Salud: `GET http://127.0.0.1:8000/health`
-- Inicio: `GET http://127.0.0.1:8000/` (redirección 302 a `/dashboard`)
-- Dashboard: `GET http://127.0.0.1:8000/dashboard`
-- OpenAPI: `http://127.0.0.1:8000/docs`
+Rutas principales:
 
-### Dashboard web
+- Inicio: `http://127.0.0.1:8000/` — presentación y acceso al formulario de análisis
+- Nuevo análisis: `http://127.0.0.1:8000/analyze` (la ruta `/dashboard` redirige aquí)
+- Resultados: `http://127.0.0.1:8000/results/{analysis_id}` — con filtros de vista y enriquecimiento IA
+- Consola anterior con los modos de demostración sobre fixtures: `http://127.0.0.1:8000/dashboard-legacy`
+- Salud: `GET /health` · Estado y límites: `GET /ai/status` · OpenAPI: `/docs`
 
-La vista [`/dashboard`](http://127.0.0.1:8000/dashboard) actúa como consola de análisis:
+### Consola web
 
-- modos **reales** (priorizados en el formulario): subida **ZIP**, **clon Git HTTPS** y **ruta local** bajo `TFG_LOCAL_ANALYSIS_ROOT` (si está habilitada la combinación raíz + `TFG_ENABLE_LOCAL_PATH`);
-- modos **MVP/demo**: informes estáticos del corpus `fixtures/mvp` y re-ejecución runtime sobre esos fixtures;
-- opciones de vista: **demo** (`hide_info`) y **agrupar equivalentes** (`group_equivalent`);
-- resultados en JSON **presentable** con `analysis_id` para trazabilidad.
+El formulario principal (`/analyze`) ofrece los tres modos de análisis de proyectos **reales**:
 
-**Guía detallada:** [`docs/04_delivery/manual-usuario-web.md`](docs/04_delivery/manual-usuario-web.md).
+- subida **ZIP** (para probar rápido, puedes comprimir `fixtures/mvp/` en un `.zip`);
+- **clonado Git HTTPS** de hosts permitidos;
+- **ruta local** relativa bajo `TFG_LOCAL_ANALYSIS_ROOT` (si está habilitado `TFG_ENABLE_LOCAL_PATH`).
 
-### Análisis de proyectos reales (nuevo)
+La vista de resultados muestra resúmenes por severidad, categoría y modo de remediación, con `analysis_id` para trazabilidad, y permite ajustar la vista sin repetir el análisis: ocultar avisos informativos (`hide_info`) y agrupar hallazgos equivalentes (`group_equivalent`).
 
-- `POST /analysis/upload-zip` — cuerpo: fichero `multipart/form-data` (campo típico `file`). Límite por defecto ~20 MB (`TFG_ZIP_MAX_BYTES`).
-- `POST /analysis/local-path` — JSON `{"relative_path": "mi-proyecto"}`: analiza un subdirectorio **relativo** bajo `TFG_LOCAL_ANALYSIS_ROOT` (definir en el servidor; sin rutas absolutas ni `..`). Responde 403 si falta la raíz, está desactivado `TFG_ENABLE_LOCAL_PATH` o la combinación no permite el modo.
-- `POST /analysis/git-clone` — JSON `{"url": "https://github.com/org/repo"}` (HTTPS, hosts permitidos por `TFG_GIT_ALLOWED_HOSTS`). Desactivar clonado con `TFG_ENABLE_GIT_CLONE=0`.
+Los modos **MVP/demo** (informes guardados del corpus y re-ejecución runtime sobre fixtures) se conservan en `/dashboard-legacy` y en la API.
 
-Variables útiles: `TFG_ZIP_MAX_BYTES`, `TFG_LOCAL_ANALYSIS_ROOT`, `TFG_GIT_CLONE_TIMEOUT`, `TFG_ANALYSIS_TIMEOUT_SEC` (segundos **por** invocación de Bandit y de Semgrep; por defecto 600; `0` = sin límite), `TFG_ANALYSIS_EXCLUDE_DIRS` (lista separada por comas de directorios o globs para Bandit `-x` y exclusiones Semgrep; ver experimento en `docs/03_experiments/`).
+### API de análisis
 
-**`.semgrepignore`:** si el proyecto analizado incluye un fichero `.semgrepignore` en su raíz (p. ej. tras un `git clone`), **Semgrep lo respeta** además de las exclusiones que añade el backend vía `--exclude`. No es un fichero que este repositorio tenga que commitear por defecto; sirve en **el código del proyecto escaneado**.
+- `POST /analysis/upload-zip` — fichero `multipart/form-data` (campo `file`). Límite por defecto ~20 MB (`TFG_ZIP_MAX_BYTES`).
+- `POST /analysis/git-clone` — JSON `{"url": "https://github.com/org/repo"}` (HTTPS, hosts permitidos por `TFG_GIT_ALLOWED_HOSTS`; desactivable con `TFG_ENABLE_GIT_CLONE=0`).
+- `POST /analysis/local-path` — JSON `{"relative_path": "mi-proyecto"}`: subdirectorio **relativo** bajo `TFG_LOCAL_ANALYSIS_ROOT` (sin rutas absolutas ni `..`). Responde 403 si el modo no está permitido.
+- `GET /analysis/fixtures` y `POST /analysis/run-fixtures` — modos de demostración sobre el corpus MVP.
+- `POST /analysis/{analysis_id}/presentable/enrich` — añade explicaciones IA a un análisis reciente sin repetir el escaneo.
 
-### Estado de la capa IA (roadmap)
+Variables útiles: `TFG_ZIP_MAX_BYTES`, `TFG_LOCAL_ANALYSIS_ROOT`, `TFG_GIT_CLONE_TIMEOUT`, `TFG_ANALYSIS_TIMEOUT_SEC` (segundos **por** invocación de Bandit y de Semgrep; por defecto 600; `0` = sin límite), `TFG_ANALYSIS_EXCLUDE_DIRS` (directorios o globs excluidos del análisis).
 
-- `GET /ai/status` — estado operativo: IA (`TFG_AI_EXPLANATIONS_ENABLED`), Git/local, límites de ZIP y rutas, timeouts (`analysis_subprocess_timeout_sec`), etc.
+**`.semgrepignore`:** si el proyecto analizado incluye un fichero `.semgrepignore` en su raíz (p. ej. tras un `git clone`), **Semgrep lo respeta** además de las exclusiones que añade el backend vía `--exclude`. Aplica al **código del proyecto escaneado**, no a este repositorio.
+
+### Capa de IA (opcional)
+
+Desactivada por defecto. Para explicaciones reales con un modelo local vía [Ollama](https://ollama.com/):
+
+```bash
+export TFG_AI_EXPLANATIONS_ENABLED=1
+export TFG_AI_PROVIDER=ollama
+export TFG_AI_MODEL=llama3.2:3b
+export TFG_AI_OLLAMA_URL=http://127.0.0.1:11434
+```
+
+Para pruebas sin red ni modelo: `TFG_AI_PROVIDER=stub`. Cada explicación conserva metadatos de trazabilidad (proveedor, modelo, versión y hash del prompt). La IA **no** modifica código: las remediaciones verificadas proceden únicamente de los remediadores deterministas.
 
 ## Calidad de código (lint)
 
-El proyecto usa [`ruff`](https://docs.astral.sh/ruff/) (incluido en el extra `dev`) como linter e ordenador de imports. La configuración vive en `pyproject.toml` (`[tool.ruff]`):
+El proyecto usa [`ruff`](https://docs.astral.sh/ruff/) (incluido en el extra `dev`) como linter y ordenador de imports. La configuración vive en `pyproject.toml` (`[tool.ruff]`):
 
 ```bash
-export PATH="$PWD/.venv/bin:$PATH"
 ruff check app tests          # detectar problemas
 ruff check app tests --fix    # corregir lo autofixeable (imports, etc.)
 ```
@@ -98,14 +119,12 @@ ruff check app tests --fix    # corregir lo autofixeable (imports, etc.)
 ## Tests
 
 ```bash
-export PATH="$PWD/.venv/bin:$PATH"
 pytest -q
 ```
 
-La suite usa cobertura sobre `app/` con reporte `term-missing` y umbral minimo del **85%** (configurado en `pyproject.toml` mediante `pytest-cov`).
+La suite usa cobertura sobre `app/` con reporte `term-missing` y umbral mínimo del **85 %** (configurado en `pyproject.toml` mediante `pytest-cov`):
 
 ```bash
-export PATH="$PWD/.venv/bin:$PATH"
 pytest --cov=app --cov-report=term-missing --cov-fail-under=85
 ```
 
@@ -113,4 +132,4 @@ En CI (Ubuntu) las dependencias se instalan como en [`.github/workflows/ci.yml`]
 
 ## Licencia
 
-Ver el fichero `LICENSE` del repositorio si existe.
+Este proyecto se distribuye bajo licencia **MIT** ([`LICENSE`](LICENSE)).
