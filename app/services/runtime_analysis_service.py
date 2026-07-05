@@ -21,10 +21,20 @@ logger = logging.getLogger(__name__)
 
 def _resolve_tool_command(binary_name: str, module_name: str) -> list[str]:
     """
-    Prefiere binario en PATH; si no está, usa `python -m <module>`.
+    Resuelve el comando de la herramienta priorizando el ejecutable instalado:
+
+    1. binario junto al intérprete actual (p. ej. el ``bin/`` del entorno
+       virtual, que no siempre está en el ``PATH`` del proceso);
+    2. binario disponible en el ``PATH``;
+    3. como último recurso, ``python -m <module>``.
+
+    Buscar primero junto al intérprete evita caer en ``python -m semgrep``,
+    invocación deprecada desde Semgrep 1.38 que termina con código de error.
     """
-    if which(binary_name):
-        return [binary_name]
+    interpreter_dir = str(Path(sys.executable).parent)
+    resolved = which(binary_name, path=interpreter_dir) or which(binary_name)
+    if resolved:
+        return [resolved]
     return [sys.executable, "-m", module_name]
 
 
