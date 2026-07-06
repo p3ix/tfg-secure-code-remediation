@@ -41,3 +41,29 @@ curl http://127.0.0.1:11434/api/version
 ```
 
 Con Ollama en marcha, la capa de IA se activa en el `.env` de la aplicación (`TFG_AI_EXPLANATIONS_ENABLED=1`, proveedor `ollama`); su estado puede consultarse en `GET /ai/status`. Ollama escucha solo en `127.0.0.1:11434` y no debe exponerse al exterior.
+
+## `config+analiza-localpath.mp4`
+
+Configuración de la aplicación desde la plantilla `.env.example` y análisis de un proyecto vulnerable mediante el modo de ruta local. Comandos ejecutados en el vídeo:
+
+```bash
+# Descomprimir el proyecto vulnerable de demostración (crea la carpeta vulnerable_app/)
+unzip vulnerable_demo.zip
+
+# Crear la configuración desde la plantilla y editarla
+cp .env.example .env
+nano .env
+```
+
+Variables ajustadas en el `.env` durante el vídeo:
+
+```bash
+# Activar las explicaciones asistidas por IA (requiere Ollama en marcha)
+TFG_AI_EXPLANATIONS_ENABLED=1
+
+# Directorio raíz permitido para el análisis por ruta local;
+# sin este valor, el modo aparece deshabilitado en el formulario
+TFG_LOCAL_ANALYSIS_ROOT=/home/p3i/tfg-secure-code-remediation
+```
+
+Tras reiniciar `uvicorn` (el `.env` se carga al arrancar), en el formulario de `/analyze` se selecciona el modo **ruta local** y se indica la ruta relativa `vulnerable_app`. La aplicación analiza el directorio con Bandit y Semgrep y muestra los hallazgos normalizados con sus explicaciones asistidas por IA. Solo pueden analizarse subdirectorios dentro de `TFG_LOCAL_ANALYSIS_ROOT`; las rutas absolutas o con `..` se rechazan.
