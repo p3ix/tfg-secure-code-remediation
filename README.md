@@ -136,6 +136,7 @@ En CI (Ubuntu) las dependencias se instalan como en [`.github/workflows/ci.yml`]
 En [`videos/`](videos/) hay vídeos cortos que muestran el sistema en funcionamiento:
 
 - [`instalacion-despliegue.mp4`](videos/instalacion-despliegue.mp4) — instalación desde cero (clonado, entorno virtual e instalación de dependencias) y despliegue: arranque local con `uvicorn app.main:app` y arranque en un servidor con `--host 0.0.0.0 --port 8000`, accediendo después vía `http://<ip-del-servidor>:8000/`.
+- [`instalacion-ollama.mp4`](videos/instalacion-ollama.mp4) — instalación de [Ollama](https://ollama.com) y descarga del modelo `llama3.2:3b` para la [capa de IA opcional](#capa-de-ia-opcional), con comprobación de que el servicio responde.
 
 Los comandos ejecutados en cada vídeo están detallados en [`videos/README.md`](videos/README.md). Los pasos corresponden a las secciones [Entorno de desarrollo](#entorno-de-desarrollo) y [Ejecutar la aplicación](#ejecutar-la-aplicación).
 
