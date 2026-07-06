@@ -67,3 +67,13 @@ TFG_LOCAL_ANALYSIS_ROOT=/home/p3i/tfg-secure-code-remediation
 ```
 
 Tras reiniciar `uvicorn` (el `.env` se carga al arrancar), en el formulario de `/analyze` se selecciona el modo **ruta local** y se indica la ruta relativa `vulnerable_app`. La aplicación analiza el directorio con Bandit y Semgrep y muestra los hallazgos normalizados con sus explicaciones asistidas por IA. Solo pueden analizarse subdirectorios dentro de `TFG_LOCAL_ANALYSIS_ROOT`; las rutas absolutas o con `..` se rechazan.
+
+## `analiza-gitclone.mp4`
+
+Análisis de un repositorio remoto mediante el modo de **clonado Git HTTPS** de la consola web. En el formulario de `/analyze` se selecciona el modo Git y se introduce la URL del repositorio (en el vídeo, este mismo proyecto):
+
+```
+https://github.com/p3ix/tfg-secure-code-remediation.git
+```
+
+La aplicación clona el repositorio en un directorio temporal, lo analiza con Bandit y Semgrep y muestra los resultados; el clon se descarta al terminar. Solo se aceptan URLs HTTPS de los hosts permitidos (`TFG_GIT_ALLOWED_HOSTS`, por defecto `github.com` y `gitlab.com`).
