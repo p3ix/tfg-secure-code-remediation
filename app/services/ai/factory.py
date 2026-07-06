@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 def get_ai_provider(settings: Settings | None = None) -> AIProvider | None:
     """
-    Resuelve el proveedor de IA según la configuración (ADR-003).
+    Resuelve el proveedor de IA según la configuración.
 
     Devuelve None (capa desactivada / degradación) cuando:
     - `TFG_AI_EXPLANATIONS_ENABLED` está desactivado, o

@@ -124,7 +124,7 @@ class Settings:
             "TFG_AI_EXPLANATIONS_ENABLED",
             False,
         )
-        # Capa IA opcional (ADR-003): proveedor, modelo y límites.
+        # Capa IA opcional: proveedor, modelo y límites.
         self.ai_provider: str = _parse_ai_provider_env("TFG_AI_PROVIDER", "ollama")
         self.ai_model: str = os.environ.get("TFG_AI_MODEL", "llama3.2:3b").strip() or "llama3.2:3b"
         self.ai_ollama_url: str = (

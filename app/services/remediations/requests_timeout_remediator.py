@@ -44,12 +44,13 @@ def propose_requests_timeout_remediation(source_code: str) -> RemediationProposa
         remediation_kind="missing_timeout",
         applicable=False,
         confidence="low",
-        summary="No se ha encontrado un patrón simple de requests sin timeout remediable automáticamente.",
+        summary="La llamada a requests analizada no encaja con el patrón al que añadir un timeout.",
         rationale=(
-            "La primera versión del remediador solo cubre llamadas simples de `requests` "
-            "sin parámetro `timeout`."
+            "Se añade timeout únicamente a llamadas directas de `requests` "
+            "(get, post, etc.) que aún no lo declaran."
         ),
         verification_hint=(
-            "Revisar manualmente el caso o ampliar el remediador para cubrir patrones más complejos."
+            "Añadir el timeout a mano si la petición se construye de forma "
+            "dinámica o a través de una sesión."
         ),
     )

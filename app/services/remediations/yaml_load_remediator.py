@@ -17,14 +17,14 @@ def propose_yaml_load_remediation(source_code: str) -> RemediationProposal:
             remediation_kind="unsafe_yaml_load",
             applicable=False,
             confidence="low",
-            summary="No se ha encontrado un patrón simple de yaml.load inseguro remediable automáticamente.",
+            summary="El yaml.load detectado no encaja con el patrón que el remediador sabe reescribir.",
             rationale=(
-                "La primera versión del remediador solo cubre patrones simples "
-                "de yaml.load con loaders inseguros explícitos."
+                "Solo se reescriben llamadas a yaml.load con un Loader inseguro "
+                "indicado de forma explícita (Loader=yaml.Loader y equivalentes)."
             ),
             verification_hint=(
-                "Revisar manualmente el caso o ampliar el remediador para cubrir "
-                "patrones más complejos."
+                "Revisar el caso a mano o extender la expresión para cubrir "
+                "variantes menos directas de yaml.load."
             ),
         )
 

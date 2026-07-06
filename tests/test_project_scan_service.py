@@ -386,7 +386,7 @@ def test_ai_status_endpoint() -> None:
     assert "local_path_max_length" in data
     assert "analysis_subprocess_timeout_sec" in data
     assert "analysis_exclude_patterns_count" in data
-    assert "documentation" in data
+    assert "message" in data
 
 
 def test_resolve_allowed_analysis_path_ok(tmp_path) -> None:

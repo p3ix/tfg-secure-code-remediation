@@ -16,14 +16,14 @@ def propose_flask_debug_remediation(source_code: str) -> RemediationProposal:
             remediation_kind="flask_debug_true",
             applicable=False,
             confidence="low",
-            summary="No se ha encontrado un patrón simple de debug=True remediable automáticamente.",
+            summary="No hay un debug=True literal en app.run(...) que se pueda desactivar de forma directa.",
             rationale=(
-                "La primera versión del remediador solo cubre casos simples de "
-                "app.run(..., debug=True) en aplicaciones Flask."
+                "El remediador se limita a app.run(..., debug=True) escrito de "
+                "forma explícita; otras formas de activar el modo debug quedan fuera."
             ),
             verification_hint=(
-                "Revisar manualmente el caso o ampliar el remediador para cubrir "
-                "patrones más complejos."
+                "Revisar la configuración de arranque a mano si el modo debug se "
+                "activa por variable de entorno u otro mecanismo."
             ),
         )
 

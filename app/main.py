@@ -1078,7 +1078,7 @@ def analysis_local_path(body: LocalPathRequest) -> dict:
 
 @app.get("/ai/status")
 def ai_status() -> dict:
-    """Estado de la capa IA opcional (explicaciones / asistencia); ver ADR-002."""
+    """Estado de la capa IA opcional de explicaciones (implementada, desactivada por defecto)."""
     s = get_settings()
     return {
         "ai_explanations_enabled": s.ai_explanations_enabled,
@@ -1098,10 +1098,9 @@ def ai_status() -> dict:
         "analysis_subprocess_timeout_sec": s.analysis_subprocess_timeout_sec,
         "analysis_exclude_patterns_count": len(s.analysis_exclude_patterns),
         "message": (
-            "Capa IA de explicación en roadmap (ADR-002); el núcleo MVP no depende "
-            "de un modelo generativo."
+            "Capa IA de explicación opcional e implementada, desactivada por defecto; "
+            "el núcleo MVP no depende de un modelo generativo."
         ),
-        "documentation": "docs/02_decisions/ADR-002-ai-assisted-roadmap.md",
     }
 
 @app.get("/analysis/fixtures")
