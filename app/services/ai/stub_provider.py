@@ -8,7 +8,7 @@ from app.services.ai.provider import PROMPT_VERSION
 STUB_MODEL = "stub-deterministic"
 
 # Texto fijo por categoría MVP: determinista, sin red ni clave. Permite cablear el
-# contrato extremo a extremo y mantener la suite/CI offline (ADR-003).
+# contrato extremo a extremo y mantener la suite/CI offline.
 # Las claves son los mvp_category REALES emitidos por los parsers (Bandit/Semgrep);
 # `example_before`/`example_after` son un ejemplo ilustrativo (no un parche aplicado).
 _CATEGORY_TEXT: dict[str, dict[str, object]] = {
@@ -99,7 +99,7 @@ _DEFAULT_TEXT = {
 
 
 class StubProvider:
-    """Proveedor determinista para tests, CI y demo offline (ADR-003)."""
+    """Proveedor determinista para tests, CI y demo offline."""
 
     name = "stub"
     model = STUB_MODEL

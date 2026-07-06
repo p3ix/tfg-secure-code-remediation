@@ -16,14 +16,14 @@ def propose_verify_false_remediation(source_code: str) -> RemediationProposal:
             remediation_kind="verify_false",
             applicable=False,
             confidence="low",
-            summary="No se ha encontrado un patrón simple de verify=False remediable automáticamente.",
+            summary="No aparece un verify=False literal que el remediador pueda cambiar con seguridad.",
             rationale=(
-                "La primera versión del remediador solo cubre casos simples de "
-                "peticiones con requests o httpx donde aparece verify=False de forma explícita."
+                "El cambio a verify=True solo se aplica cuando verify=False figura "
+                "textualmente en la llamada (requests o httpx), sin indirecciones."
             ),
             verification_hint=(
-                "Revisar manualmente el caso o ampliar el remediador para cubrir "
-                "patrones más complejos."
+                "Comprobar el caso manualmente; si el valor llega por variable o "
+                "configuración, el remediador no lo toca."
             ),
         )
 

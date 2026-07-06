@@ -6,7 +6,7 @@ from dataclasses import dataclass
 @dataclass
 class AIExplanation:
     """
-    Explicación asistida por IA de un hallazgo (ADR-003).
+    Explicación asistida por IA de un hallazgo.
 
     No contiene parches de código: solo texto educativo y una sugerencia de
     remediación en lenguaje natural. La remediación verificada sigue siendo

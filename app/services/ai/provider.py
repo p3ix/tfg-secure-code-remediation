@@ -11,7 +11,7 @@ PROMPT_VERSION = "v4"
 @runtime_checkable
 class AIProvider(Protocol):
     """
-    Contrato de un proveedor de explicaciones (ADR-003).
+    Contrato de un proveedor de explicaciones.
 
     Implementaciones previstas: StubProvider (determinista, tests/CI),
     OllamaProvider (local, por defecto en uso real) y un proveedor API opcional.

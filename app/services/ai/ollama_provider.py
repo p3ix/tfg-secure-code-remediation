@@ -96,7 +96,7 @@ def _build_prompt(finding: NormalizedFinding, *, include_snippet: bool) -> str:
 
 
 class OllamaProvider:
-    """Proveedor de explicaciones contra un servidor Ollama local (ADR-003)."""
+    """Proveedor de explicaciones contra un servidor Ollama local."""
 
     name = "ollama"
 

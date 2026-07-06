@@ -120,15 +120,15 @@ def propose_command_injection_remediation(
         applicable=False,
         confidence="low",
         summary=(
-            "No se ha encontrado un patrón simple de command injection "
-            "remediable automáticamente."
+            "El caso de command injection no coincide con las formas que el "
+            "remediador sabe reescribir."
         ),
         rationale=(
-            "La primera versión del remediador solo cubre patrones simples "
-            "de subprocess con shell=True y os.system con argumentos directos."
+            "Se reescriben dos formas concretas: subprocess con shell=True y "
+            "os.system con el comando en línea; el resto se deja para revisión."
         ),
         verification_hint=(
-            "Revisar manualmente el caso o ampliar el remediador para cubrir "
-            "patrones más complejos."
+            "Revisar el caso a mano cuando el comando se compone en varios pasos "
+            "o llega desde otra capa."
         ),
     )

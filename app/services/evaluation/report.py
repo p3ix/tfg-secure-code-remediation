@@ -58,7 +58,7 @@ def render_markdown(report: dict[str, Any]) -> str:
     lines.append("| Fichero | Categoría | Detectado | Herramientas |")
     lines.append("|---------|-----------|-----------|--------------|")
     for c in det["per_case"]:
-        mark = "✅" if c["detected"] else "❌"
+        mark = "Sí" if c["detected"] else "No"
         tools_str = ", ".join(c["tools"]) if c["tools"] else "—"
         lines.append(f"| `{c['path']}` | {c['category']} | {mark} | {tools_str} |")
     lines.append("")
@@ -93,7 +93,7 @@ def render_markdown(report: dict[str, Any]) -> str:
     lines.append("| Fichero | Categoría prohibida | Falso positivo |")
     lines.append("|---------|---------------------|----------------|")
     for c in fp["per_case"]:
-        mark = "⚠️ sí" if c["false_positive"] else "no"
+        mark = "Sí" if c["false_positive"] else "No"
         lines.append(f"| `{c['path']}` | {c['forbidden_category']} | {mark} |")
     lines.append("")
 
@@ -107,7 +107,7 @@ def render_markdown(report: dict[str, Any]) -> str:
     lines.append("| Fichero | Categoría | Autofix candidate | Modos |")
     lines.append("|---------|-----------|-------------------|-------|")
     for c in rem["per_case"]:
-        mark = "✅" if c["autofix_candidate"] else "❌"
+        mark = "Sí" if c["autofix_candidate"] else "No"
         modes = ", ".join(c["modes"]) if c["modes"] else "—"
         lines.append(f"| `{c['path']}` | {c['category']} | {mark} | {modes} |")
     lines.append("")

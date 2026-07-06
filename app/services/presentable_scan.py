@@ -183,7 +183,7 @@ def build_presentable_scan(
     Si group_equivalent=True, agrupa hallazgos con mismo fichero, línea y mvp_category
     y añade `sources` + `group_size` en cada fila.
 
-    Si ai_provider no es None, cada fila incluye `ai_explanation` (ADR-003); en otro
+    Si ai_provider no es None, cada fila incluye `ai_explanation`; en otro
     caso el campo es None. La generación es degradable y nunca tumba el escaneo.
     """
     from collections import Counter

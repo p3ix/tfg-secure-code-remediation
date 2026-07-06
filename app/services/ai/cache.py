@@ -17,7 +17,7 @@ def explanation_cache_key(
 ) -> ExplanationKey:
     """
     Clave de caché por categoría/estándar/regla (no por fichero/línea), de modo que
-    hallazgos equivalentes comparten explicación y son reproducibles (ADR-003).
+    hallazgos equivalentes comparten explicación y son reproducibles.
     """
     return (
         provider_name,

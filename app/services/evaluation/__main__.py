@@ -3,7 +3,7 @@
 Uso:
     python -m app.services.evaluation [directorio_salida]
 
-Por defecto escribe en `docs/04_delivery/`:
+Por defecto escribe en `var/evaluation/` (artefactos generados, fuera del repo):
     - evaluation-metrics.md   (informe legible para la memoria)
     - evaluation-metrics.json (métricas en bruto)
 """
@@ -17,7 +17,7 @@ from pathlib import Path
 from app.services.evaluation.report import render_markdown
 from app.services.evaluation.runner import _REPO_ROOT, run_evaluation
 
-DEFAULT_OUTPUT_DIR = _REPO_ROOT / "docs" / "04_delivery"
+DEFAULT_OUTPUT_DIR = _REPO_ROOT / "var" / "evaluation"
 
 
 def main(argv: list[str] | None = None) -> int:
