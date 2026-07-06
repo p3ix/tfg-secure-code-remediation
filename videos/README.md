@@ -67,3 +67,23 @@ TFG_LOCAL_ANALYSIS_ROOT=/home/p3i/tfg-secure-code-remediation
 ```
 
 Tras reiniciar `uvicorn` (el `.env` se carga al arrancar), en el formulario de `/analyze` se selecciona el modo **ruta local** y se indica la ruta relativa `vulnerable_app`. La aplicación analiza el directorio con Bandit y Semgrep y muestra los hallazgos normalizados con sus explicaciones asistidas por IA. Solo pueden analizarse subdirectorios dentro de `TFG_LOCAL_ANALYSIS_ROOT`; las rutas absolutas o con `..` se rechazan.
+
+## `analiza-gitclone.mp4`
+
+Análisis de un repositorio remoto mediante el modo de **clonado Git HTTPS** de la consola web. En el formulario de `/analyze` se selecciona el modo Git y se introduce la URL del repositorio (en el vídeo, este mismo proyecto):
+
+```
+https://github.com/p3ix/tfg-secure-code-remediation.git
+```
+
+La aplicación clona el repositorio en un directorio temporal, lo analiza con Bandit y Semgrep y muestra los resultados; el clon se descarta al terminar. Solo se aceptan URLs HTTPS de los hosts permitidos (`TFG_GIT_ALLOWED_HOSTS`, por defecto `github.com` y `gitlab.com`).
+
+## `demo-remediacion.mp4`
+
+Demostración del ciclo completo de remediación determinista (detecta, corrige, reverifica) sobre los fixtures canónicos de autofix. Comando ejecutado en el vídeo (desde la raíz del repositorio, con el entorno virtual activo):
+
+```bash
+python -m scripts.demo_remediacion
+```
+
+Para cada fixture del corpus se muestra el fragmento vulnerable (antes), la propuesta de remediación determinista (después) y el resultado de la verificación: el parche se aplica sobre una copia temporal —el código original nunca se modifica— y se reanaliza con Bandit y Semgrep para comprobar que el hallazgo de la categoría desaparece. El vídeo termina con el resumen `6/6 fixtures corregidos y verificados`. La inyección SQL queda fuera del autofix por diseño (solo detección y propuesta); esta vía de remediación es independiente de la consola web, que se detiene en detección, clasificación y explicación asistida por IA.

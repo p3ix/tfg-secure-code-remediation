@@ -138,6 +138,8 @@ En [`videos/`](videos/) hay vídeos cortos que muestran el sistema en funcionami
 - [`instalacion-despliegue.mp4`](videos/instalacion-despliegue.mp4) — instalación desde cero (clonado, entorno virtual e instalación de dependencias) y despliegue: arranque local con `uvicorn app.main:app` y arranque en un servidor con `--host 0.0.0.0 --port 8000`, accediendo después vía `http://<ip-del-servidor>:8000/`.
 - [`instalacion-ollama.mp4`](videos/instalacion-ollama.mp4) — instalación de [Ollama](https://ollama.com) y descarga del modelo `llama3.2:3b` para la [capa de IA opcional](#capa-de-ia-opcional), con comprobación de que el servicio responde.
 - [`config+analiza-localpath.mp4`](videos/config+analiza-localpath.mp4) — configuración del `.env` desde `.env.example` (activación de la capa de IA y del análisis por ruta local con `TFG_LOCAL_ANALYSIS_ROOT`) y análisis del proyecto vulnerable de demostración (`vulnerable_demo.zip` descomprimido) mediante el modo de ruta local de la consola web.
+- [`analiza-gitclone.mp4`](videos/analiza-gitclone.mp4) — análisis de un repositorio remoto mediante el modo de clonado Git HTTPS de la consola web, usando este mismo repositorio como ejemplo.
+- [`demo-remediacion.mp4`](videos/demo-remediacion.mp4) — demostración del ciclo completo de remediación determinista sobre el corpus `fixtures/mvp/` con `scripts/demo_remediacion.py`: para cada fixture se muestra el fragmento vulnerable, la propuesta de corrección y la verificación por reanálisis con Bandit y Semgrep.
 
 Los comandos ejecutados en cada vídeo están detallados en [`videos/README.md`](videos/README.md). Los pasos corresponden a las secciones [Entorno de desarrollo](#entorno-de-desarrollo) y [Ejecutar la aplicación](#ejecutar-la-aplicación).
 
