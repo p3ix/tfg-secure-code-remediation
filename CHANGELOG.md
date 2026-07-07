@@ -7,7 +7,24 @@ y el proyecto usa [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [Unreleased]
 
-- Próxima fase: ampliar autofix asistido más allá de los patrones MVP y completar la tabla de evaluación `ollama` con el modelo local.
+- Líneas futuras recogidas en la memoria del TFG: evaluación sobre repositorios reales, remediación sobre código del usuario, integración en CI/CD y exportador SARIF.
+
+## [1.0.0] - 2026-07-07
+
+Versión final entregada como Trabajo Fin de Grado.
+
+### Añadido
+- **Vídeos de demostración** en `videos/` (instalación y despliegue, instalación de Ollama, configuración y análisis por ruta local, análisis por clonado Git y demo de remediación determinista), documentados en [`videos/README.md`](videos/README.md).
+- Script `scripts/demo_remediacion.py`: ciclo completo detecta→corrige→reverifica sobre los fixtures de autofix del MVP (6/6 corregidos y verificados).
+
+### Arreglado
+- Resolución del binario de **Semgrep** junto al intérprete del entorno virtual, evitando el fallback deprecado `python -m semgrep`.
+
+### Cambiado
+- **README** reescrito: estado real del proyecto, rutas de la consola web v2 y capa de IA.
+- `/ai/status` refleja que la capa de IA está implementada (desactivada por defecto).
+- La CLI de evaluación escribe sus reportes en `var/evaluation/`.
+- Limpieza de referencias internas a documentación no distribuida con el repositorio.
 
 ## [0.2.0] - 2026-06-30
 
@@ -55,6 +72,7 @@ Primera release: **web de análisis de seguridad operativa, sin IA**.
 - Linter `ruff` (lint + orden de imports) integrado en CI y `pre-commit`.
 - Suite de **170 tests** con gate de cobertura al **85%** (cobertura real ~92%).
 
-[Unreleased]: https://github.com/p3ix/tfg-secure-code-remediation/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/p3ix/tfg-secure-code-remediation/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/p3ix/tfg-secure-code-remediation/releases/tag/v1.0.0
 [0.2.0]: https://github.com/p3ix/tfg-secure-code-remediation/releases/tag/v0.2.0
 [0.1.0]: https://github.com/p3ix/tfg-secure-code-remediation/releases/tag/v0.1.0

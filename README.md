@@ -8,7 +8,7 @@ Trabajo de Fin de Grado de Asier Lara. La memoria y los anexos (manuales de usua
 
 ## Estado del proyecto
 
-Versión **v0.2.0** ([releases](https://github.com/p3ix/tfg-secure-code-remediation/releases)). Todo el flujo está operativo:
+Versión **v1.0.0** ([releases](https://github.com/p3ix/tfg-secure-code-remediation/releases)), versión final del TFG. Todo el flujo está operativo:
 
 - **Detección y clasificación**: Bandit + Semgrep sobre el corpus `fixtures/mvp/` o sobre proyectos reales, con modelo normalizado de hallazgos y referencias CWE/OWASP/ASVS.
 - **Análisis de proyectos reales** desde web y API: subida **ZIP**, **clonado Git HTTPS** acotado y **ruta local** bajo una raíz permitida, con límites operativos configurables.
